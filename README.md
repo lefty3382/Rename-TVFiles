@@ -7,7 +7,10 @@ You must obtain your own API key from TheTVDB website, they are free for persona
 ## Script Parameters
 `-SourcePath` (string)
 
-File path to the source directory where your individual download folders are.  Download folder names must match TV show names according to TheTVDB.
+Folder path string which contains all pertinent files.  The script assumes you have these subfolders:
+* \_New - The parent folder which contains all new files to be processed.  Each distinct TV series must be in its own sub-folder.  The name of each sub-folder must match the name of the TV series according to TheTVDB.  This is how the script identifies the correct series to pull episode for.
+* TV - The parent folder which all files will be moved to after processing.  Each distinct TV series will be placed in its own sub-folder using the name of the TV series from TheTVDB database.
+* Anime - The parent folder which all designated Anime series will be moved to after processing.  Each distinct TV series will be placed in its own sub-folder using the name of the TV series from TheTVDB database.
 
 `-APIKey` (string)
 
@@ -16,9 +19,11 @@ File path to a .JSON file containing API key information in order to access TheT
 `-VerboseOutput` (switch)
 
 Sets VerbosePreference variable to 'Continue', displaying Verbose output in console
+## Behavior
+The script a
 ## Example Output
 ```
-PS Z:\GitHub\Rename-TVFiles> .\Rename-TVFiles.ps1 -SourcePath \\192.168.0.64\storage\Film\_New\ -APIKey Z:\GitHub\APIKeySample.json
+PS Z:\GitHub\Rename-TVFiles> .\Rename-TVFiles.ps1 -SourcePath \\192.168.0.64\storage\Film\ -APIKey Z:\GitHub\APIKeySample.json
 
 TV (0) or Anime (1)?: 0
 

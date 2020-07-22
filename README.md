@@ -5,13 +5,15 @@ This PowerShell script takes media files and renames them according to informati
 ## Prerequisities
 You must obtain your own API key from TheTVDB website, they are free for personal use. Sign up here [TheTVDB](https://thetvdb.com/).  Your personal API key information must be included in a JSON file referenced in the script parameter 'APIKey'.
 ## Script Parameters
-`-SourcePath`
+`-SourcePath` (string)
 
 File path to the source directory where your individual download folders are.  Download folder names must match TV show names according to TheTVDB.
-`-APIKey`
+
+`-APIKey` (string)
 
 File path to a .JSON file containing API key information in order to access TheTVDB online database.
-`-VerboseOutput`
+
+`-VerboseOutput` (switch)
 
 Sets VerbosePreference variable to 'Continue', displaying Verbose output in console
 ## Example Output

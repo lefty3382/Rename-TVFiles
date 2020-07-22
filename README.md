@@ -64,7 +64,7 @@ Received episode data for: "The Daily Show"
 Episode count: 3886
 
 
-Destination folder path detected: "\\192.168.0.64\storage\Film\TV\The Daily Show"
+Destination folder path detected: "\\server\storage\Film\TV\The Daily Show"
 Checking for subfolders
 
 
@@ -78,5 +78,5 @@ DB Season number: 25
 DB Episode number: 127
 Updated episode name: "Michele Harper & Patton Oswalt"
 New file name: "The Daily Show - S25E127 - Michele Harper & Patton Oswalt.mkv"
-Moving "s25e127.mkv" to \\192.168.0.64\storage\Film\TV\The Daily Show\The Daily Show - S25E127 - Michele Harper & Patton Oswalt.mkv
+Moving "s25e127.mkv" to \\server\storage\Film\TV\The Daily Show\The Daily Show - S25E127 - Michele Harper & Patton Oswalt.mkv
 ```

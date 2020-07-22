@@ -6,7 +6,7 @@ This PowerShell script takes media files and renames them according to informati
 * You must obtain your own API key from TheTVDB website, they are free for personal use. Sign up here [TheTVDB](https://thetvdb.com/).  Your personal API key information must be included in a JSON file referenced in the script parameter 'APIKey'.
 * Files must include season number and episode number in file name (ex. S01E01) in order to properly identify new name.
 ## Script Parameters
-`-SourcePath` (string) - (Example: '\\server\storage\Film')
+`-SourcePath` (string) - (Example: '__\\\server\storage\Film__')
 
 Folder path string which contains all pertinent files.  The script assumes you have these subfolders:
 * \_New - The parent folder which contains all new files to be processed.  Each distinct TV series must be in its own sub-folder.  The name of each sub-folder must match the name of the TV series according to TheTVDB.  This is how the script identifies the correct series to pull episode information for.

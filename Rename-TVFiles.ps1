@@ -37,7 +37,7 @@ param
 	[switch]$VerboseOutput
 )
 
-#ScriptVersion = "1.0.0.1"
+#ScriptVersion = "1.0.0.2"
 
 ##################################
 #Script Variables
@@ -66,11 +66,11 @@ $SubFolders = Get-ChildItem -Path $DownloadsDirectory
 $TVorAnime = Read-Host "TV (0) or Anime (1)?"
 if (($TVorAnime -like "TV") -or ($TVorAnime -like "0"))
 {
-    $TVDirectory = Join-Path -Path $DownloadsDirectory -ChildPath "TV"
+    $TVDirectory = Join-Path -Path $SourcePath -ChildPath "TV"
 }
 elseif (($TVorAnime -like "Anime") -or ($TVorAnime -like "1"))
 {
-    $TVDirectory = Join-Path -Path $DownloadsDirectory -ChildPath "Anime"
+    $TVDirectory = Join-Path -Path $SourcePath -ChildPath "Anime"
 }
 else
 {

@@ -1,5 +1,5 @@
 # Rename-TVFiles
-A PowerShell script which renames TV media files using information from TheTVDB API.
+A PowerShell script which renames TV media files using information from TheTVDB API.  This script has been extremely helpful in organizing my digital media collection, plus was a fun exercise so I thought I'd share.  Enjoy!
 ## Detailed Description
 This PowerShell script takes media files and renames them according to information queried from TheTVDB online database via API query.
 ## Prerequisities

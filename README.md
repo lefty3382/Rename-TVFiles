@@ -23,6 +23,7 @@ Sets VerbosePreference variable to 'Continue', displaying Verbose output in cons
 ## Behavior
 The script is interactive in nature, prompting the user to make a series of choices depending on information gathered during execution.  The first choice will be to select the parent destination folder based on media type (TV|Anime).  The script will enumerate all subfolders from source path and prompt user to select which subfolder to process.  The script will then connect to TheTVDB using the API key information provided in the JSON file and attempt to obtain an access token.  If successful, it will then search for the correct TV series from the database based on the name of the subfolder selected.  If multiple values are returned, the script will prompt the user to select the correct one.  The script will then retrieve series and episode information for the chosen TV series.  Extraneous files (.exe\.nfo\.txt) files will be removed.  Each file will be renamed in this format:
 * Series Name - S01E01 - Episode Name
+
 Successfully renamed files will be placed in a new subfolder under the media type selected (ex. $SourcePath\TV\SeriesName\EpisodeFileName.ext).
 ## Example Output
 ```

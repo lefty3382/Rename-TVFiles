@@ -27,7 +27,7 @@ The script is interactive in nature, prompting the user to make a series of choi
 Successfully renamed files will be placed in a new subfolder under the media type selected (ex. __$SourcePath\TV\SeriesName\EpisodeFileName.ext__).
 ## Example Output
 ```
-PS Z:\GitHub\Rename-TVFiles> .\Rename-TVFiles.ps1 -SourcePath \\192.168.0.64\storage\Film\ -APIKey Z:\GitHub\APIKeySample.json
+PS Z:\GitHub\Rename-TVFiles> .\Rename-TVFiles.ps1 -SourcePath \\server\storage\Film\ -APIKey Z:\Files\APIKeySample.json
 
 TV (0) or Anime (1)?: 0
 

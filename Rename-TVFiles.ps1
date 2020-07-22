@@ -13,13 +13,13 @@
 
 param
 (
-    # Source directory path
+    # Parent directory path
     [Parameter(
         Mandatory = $false,
         Position = 0,
         ValueFromPipeline = $true)]
     [Alias("Source","Path")]
-    [string]$SourcePath = "\\192.168.0.64\storage\Film\_New\",
+    [string]$SourcePath = "\\192.168.0.64\storage\Film\",
 
     # Path to API key file, JSON format
     [Parameter(
@@ -37,7 +37,7 @@ param
 	[switch]$VerboseOutput
 )
 
-#ScriptVersion = "1.0.0.0"
+#ScriptVersion = "1.0.0.1"
 
 ##################################
 #Script Variables
@@ -55,22 +55,22 @@ else
 $ConvertedBody = Get-Content $APIKey -Raw
 $LoginURL = "https://api.thetvdb.com/login"
 $SeriesSearchURL = "https://api.thetvdb.com/search/series?name="
-$Server = "192.168.0.64"
 $WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
 $StandardSeasonEpisodeFormatRegex = '(S|s)(\d{1,4})[ ]{0,1}(E|e|x|-)(\d{1,3})'
 $SeasonRegex = '^(S|s)$'
 $EpisodeRegex = '^(E|e|x|-)$'
 $SeasonDigitRegex = '^\d{1,4}$'
 $EpisodeDigitRegex = '^\d{1,3}$'
-$SubFolders = Get-ChildItem -Path $SourcePath
+$DownloadsDirectory = Join-Path -Path $SourcePath -ChildPath "_New"
+$SubFolders = Get-ChildItem -Path $DownloadsDirectory
 $TVorAnime = Read-Host "TV (0) or Anime (1)?"
 if (($TVorAnime -like "TV") -or ($TVorAnime -like "0"))
 {
-    $TVDirectory = "\\$server\storage\Film\TV"
+    $TVDirectory = Join-Path -Path $DownloadsDirectory -ChildPath "TV"
 }
 elseif (($TVorAnime -like "Anime") -or ($TVorAnime -like "1"))
 {
-    $TVDirectory = "\\$server\storage\Film\Anime"
+    $TVDirectory = Join-Path -Path $DownloadsDirectory -ChildPath "Anime"
 }
 else
 {
@@ -112,7 +112,7 @@ elseif ($SubFolders.count -eq 1)
 }
 else
 {
-    Write-Warning "No folders in `"$SourcePath`" detected"
+    Write-Warning "No folders in `"$DownloadsDirectory`" detected"
     exit
 }
 

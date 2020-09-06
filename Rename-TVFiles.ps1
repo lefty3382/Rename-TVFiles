@@ -37,7 +37,7 @@ param
 	[switch]$VerboseOutput
 )
 
-#ScriptVersion = "1.0.0.2"
+#ScriptVersion = "1.0.0.3"
 
 ##################################
 #Script Variables
@@ -510,7 +510,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
     #Double digit number with leading zero
     if ($SeasonNumber -match "^0[0-9]$")
     {
-        $SeasonTrim = $SeasonNumber.TrimStart('0')
+        $SeasonTrim = $SeasonNumber[1]
     }
     else
     {
@@ -528,7 +528,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
         #Double digit number with leading zero
         if ($EpisodeNumber -match "^0[0-9]$")
         {
-            $EpisodeTrim = $EpisodeNumber.TrimStart('0')
+            $EpisodeTrim = $EpisodeNumber[1]
         }
         #Double digit number with non-zero leading number
         else
@@ -555,9 +555,12 @@ for ($i=0;$i -lt $Files.Count;$i++)
         }
     }
 
+    Write-Verbose "Trimmed season number: $SeasonTrim"
+    Write-Verbose "Trimmed episode number: $EpisodeTrim"
+
     # Match episode information to TVDB data
     if ($EpisodeMatch) { Remove-Variable EpisodeMatch }
-    $EpisodeMatch = $episodedata.data | Where-Object { ($_.airedepisodenumber -like $episodeTrim) -and ($_.airedseason -like $seasontrim) }
+    $EpisodeMatch = $episodedata.data | Where-Object { ($_.airedepisodenumber -like $EpisodeTrim) -and ($_.airedseason -like $SeasonTrim) }
     if ($EpisodeMatch)
     {
         Write-Output "Episode data match found"

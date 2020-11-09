@@ -28,29 +28,14 @@ param
         ValueFromPipeline = $false)]
     [ValidatePattern("^.*\.json$")]
     [Alias("API","Key")]
-    [string]$APIKey = "Z:\GitHub\TVDBKey.json",
-    
-    # Sets VerbosePreference variable to 'Continue', displaying Verbose output in console
-    [Parameter(
-        Mandatory = $false,
-        Position = 1)]
-	[switch]$VerboseOutput
+    [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-#ScriptVersion = "1.0.0.3"
+#ScriptVersion = "1.0.1.0"
 
 ##################################
 #Script Variables
 ##################################
-
-if ($VerboseOutput)
-{
-    $VerbosePreference = "Continue"
-}
-else
-{
-    $VerbosePreference = "SilentlyContinue"
-}
 
 $ConvertedBody = Get-Content $APIKey -Raw
 $LoginURL = "https://api.thetvdb.com/login"
@@ -64,11 +49,13 @@ $EpisodeDigitRegex = '^\d{1,3}$'
 $DownloadsDirectory = Join-Path -Path $SourcePath -ChildPath "_New"
 $SubFolders = Get-ChildItem -Path $DownloadsDirectory
 $TVorAnime = Read-Host "TV (0) or Anime (1)?"
-if (($TVorAnime -like "TV") -or ($TVorAnime -like "0"))
+$TVRegex = "(?i)^0|TV$"
+$AnimeRegex = "(?i)^1|Anime$"
+if ($TVorAnime -match $TVRegex)
 {
     $TVDirectory = Join-Path -Path $SourcePath -ChildPath "TV"
 }
-elseif (($TVorAnime -like "Anime") -or ($TVorAnime -like "1"))
+elseif ($TVorAnime -match $AnimeRegex)
 {
     $TVDirectory = Join-Path -Path $SourcePath -ChildPath "Anime"
 }

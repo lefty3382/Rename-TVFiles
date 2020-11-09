@@ -31,10 +31,10 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-#ScriptVersion = "1.0.1.0"
+# ScriptVersion = "1.0.2.0"
 
 ##################################
-#Script Variables
+# Script Variables
 ##################################
 
 $ConvertedBody = Get-Content $APIKey -Raw
@@ -48,26 +48,57 @@ $SeasonDigitRegex = '^\d{1,4}$'
 $EpisodeDigitRegex = '^\d{1,3}$'
 $DownloadsDirectory = Join-Path -Path $SourcePath -ChildPath "_New"
 $SubFolders = Get-ChildItem -Path $DownloadsDirectory
-$TVorAnime = Read-Host "TV (0) or Anime (1)?"
 $TVRegex = "(?i)^0|TV$"
 $AnimeRegex = "(?i)^1|Anime$"
-if ($TVorAnime -match $TVRegex)
-{
-    $TVDirectory = Join-Path -Path $SourcePath -ChildPath "TV"
-}
-elseif ($TVorAnime -match $AnimeRegex)
-{
-    $TVDirectory = Join-Path -Path $SourcePath -ChildPath "Anime"
-}
-else
-{
-    Write-Warning "You are not very smart!"
-    Write-Warning "That was an invalid answer!"
-    Write-Warning "As a reward, you have to start over now!"
-    exit
+
+##################################
+# Script Functions
+##################################
+
+function Get-TVorAnimeDirectory {
+    [CmdletBinding()]
+    param (
+        # Parent directory path
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$SourcePath
+    )
+    
+    begin
+    {
+        $TVorAnime = Read-Host "TV (0) or Anime (1)?"
+    }
+    
+    process
+    {
+        if ($TVorAnime -match $TVRegex)
+        {
+            $FinalPath = Join-Path -Path $SourcePath -ChildPath "TV"
+        }
+        elseif ($TVorAnime -match $AnimeRegex)
+        {
+            $FinalPath = Join-Path -Path $SourcePath -ChildPath "Anime"
+        }
+        else
+        {
+            Write-Warning "You are not very smart!"
+            Write-Warning "That was an invalid answer!"
+            Write-Warning "As a reward, you have to start over now!"
+            exit
+        }
+    }
+    
+    end
+    {
+        return $FinalPath
+    }
 }
 
-#Validate correct source folder
+$TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
+
+# Validate correct source folder
 if ($SubFolders.count -gt 1)
 {
     [int]$i = "0"
@@ -108,7 +139,7 @@ $SeriesSearchString = $FolderName
 $SeriesSearchURLTotal = $SeriesSearchURL + $SeriesSearchString
 
 ##################################
-#Get API token
+# Get API token
 ##################################
 
 try
@@ -131,7 +162,7 @@ finally
 }
 
 ##################################
-#Get Series data
+# Get Series data
 ##################################
 
 try
@@ -166,7 +197,7 @@ elseif ($SeriesSearchData.data.Count -eq 1)
 Write-Output "Received series data for: `"$($SeriesSearchData.data[$Number].seriesName)`""
 
 ##################################
-#Get Episode data
+# Get Episode data
 ##################################
 
 $EpisodeSearchURL = "https://api.thetvdb.com/series/"
@@ -185,7 +216,7 @@ catch
     exit
 }
 
-#For Series with more than 100 episodes, combine results from multiple pages
+# For Series with more than 100 episodes, combine results from multiple pages
 if ($EpisodeData.links.last -gt 1)
 {
     for ([int]$i=2;$i -le $EpisodeData.links.last;$i++)
@@ -212,10 +243,10 @@ Write-Output "Episode count: $($EpisodeData.data.Count)"
 "`n"
 
 ##################################
-#Verify/create destination folder path
+# Verify/create destination folder path
 ##################################
 
-#Determine destination folder/series name
+# Determine destination folder/series name
 if ($SeriesSearchData.data[$Number].seriesName -ne $FolderName)
 {
     Write-Output "TVDB Series name does not match source folder name"
@@ -248,7 +279,7 @@ else
     $NewSeriesName = $SeriesSearchData.data[$Number].seriesName
 }
 
-#Match series name to regex for windows file names
+# Match series name to regex for windows file names
 if ($NewSeriesName -notmatch $WindowsFileNameRegex)
 {
     Write-Warning "Series name does not conform to Windows file name rules"
@@ -270,7 +301,7 @@ else
     $DestinationFolderPath = Join-Path -Path $TVDirectory -ChildPath $NewSeriesName
 }
 
-#Create destination folder if doesn't exist
+# Create destination folder if doesn't exist
 if (!(Test-Path $DestinationFolderPath))
 {
     Write-Output "Destination folder `"$DestinationFolderPath`" does not exist"
@@ -292,7 +323,7 @@ else
 }
 
 ##################################
-#Eliminate subfolders
+# Eliminate subfolders
 ##################################
 
 $Files = Get-ChildItem $TargetFolder.FullName
@@ -301,7 +332,7 @@ Write-Output "Checking for subfolders"
 
 foreach ($File in $Files)
 {
-    #Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
+    # Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
     if ($File.PSIsContainer -eq $true)
     {
         Write-Output "Subfolder found: $($File.name)"
@@ -315,11 +346,11 @@ foreach ($File in $Files)
                 Write-Output "New path: $($TargetFolder.FullName)"
                 Move-Item -LiteralPath $subfile.fullname -Destination $TargetFolder.FullName -Force
             }
-            #Delete Subfolder
+            # Delete Subfolder
             Write-Output "Removing folder: $($File.FullName)"
             Remove-Item -LiteralPath $File.FullName -Recurse -Force
         }
-        #"Extras" subfolder
+        # "Extras" subfolder
         elseif ($File.Name -match "Extras")
         {
             $ExtrasFolder = Get-ChildItem -LiteralPath $File.FullName -Force
@@ -345,7 +376,7 @@ foreach ($File in $Files)
                     {
                         Move-Item -LiteralPath $ExtrasItem.FullName -Destination $TargetFolder.FullName -Force
                     }
-                    #Delete empty folder after moving child items
+                    # Delete empty folder after moving child items
                     if (((Get-ChildItem $File.FullName | Measure-Object).Count) -eq 0)
                     {
                         Write-Output "`"Extras`" folder is empty, deleting folder"
@@ -375,14 +406,14 @@ foreach ($File in $Files)
 }
 
 ##################################
-#Remove unnecessary files
+# Remove unnecessary files
 ##################################
 
 $Files = Get-ChildItem -LiteralPath $TargetFolder.FullName
 
 foreach ($File in $Files)
 {
-    #Delete .TXT .EXE .NFO files
+    # Delete .TXT .EXE .NFO files
     if (($File.name -like "*.nfo") -or
         ($File.name -like "*.exe") -or
         ($File.name -like "*.txt"))
@@ -393,7 +424,7 @@ foreach ($File in $Files)
 }
 
 ##################################
-#Rename files
+# Rename files
 ##################################
 
 $Files = Get-ChildItem -LiteralPath $TargetFolder.FullName -Recurse
@@ -403,26 +434,26 @@ for ($i=0;$i -lt $Files.Count;$i++)
     if ($SeasonNumber) { Remove-Variable SeasonNumber }
     if ($EpisodeNumber) { Remove-Variable EpisodeNumber }
     
-    #$Percent = [math]::Round($i/$Files.Count*100,0)
-    #Write-Progress -Activity "Renaming file $i of $($Files.count)" -PercentComplete $Percent
+    # $Percent = [math]::Round($i/$Files.Count*100,0)
+    # Write-Progress -Activity "Renaming file $i of $($Files.count)" -PercentComplete $Percent
     $CurrentFile = $Files[$i]
     
     "`n"
     Write-Output "Parsing file: $($CurrentFile.name)"
 
-    #NewName variable used as working file name
+    # NewName variable used as working file name
     $NewName = $CurrentFile.Name
 
-    #Season and Episode number are in standard format
+    # Season and Episode number are in standard format
     if ($NewName -match $StandardSeasonEpisodeFormatRegex)
     {
         Write-Output "File name `"$NewName`" matches standard formatting"
     }
-    #Season and Episode not in standard format
+    # Season and Episode not in standard format
     else
     {
         Write-Warning "File name does NOT contain standard season and episode format"
-        #Replace uncommon variations
+        # Replace uncommon variations
         $NewName = $NewName.replace(' Chapter ','E')
         $NewName = $NewName.replace('_season_','S')
         $NewName = $NewName.replace(' Season ','S')
@@ -432,12 +463,12 @@ for ($i=0;$i -lt $Files.Count;$i++)
         $NewName = $NewName.Replace(' Series ','S')
         $NewName = $NewName.Replace('Series','S')
 
-        #if file name matches ' 2x01 ' or ' 2e01 ' or [2x01] or [02x01] or [2e01], replace with S2E01
+        # if file name matches ' 2x01 ' or ' 2e01 ' or [2x01] or [02x01] or [2e01], replace with S2E01
         if ($NewName -match ('(\[| )\d{1,4}(E|e|x|-)\d{1,3}(\]| )'))
         {
             $NewName = $NewName.Replace('[','S').replace(']','')
         }
-        #if file name starts with 4 digits for season and episode number
+        # if file name starts with 4 digits for season and episode number
         elseif ($NewName -match ('^\d{4}'))
         {
             $SeasonNumber = $NewName[0] + $NewName[1]
@@ -450,13 +481,13 @@ for ($i=0;$i -lt $Files.Count;$i++)
             $EpisodeNumber = $NewName[1] + $NewName[2]
         }
     }
-    #Parse season/episode numbers from file name if not already done
+    # Parse season/episode numbers from file name if not already done
     if (!($SeasonNumber -or $EpisodeNumber))
     {
         Write-Verbose "Parsing Season\Episode numbers using standard format regex"
         $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
 
-        #Parse out season/episode number
+        # Parse out season/episode number
         for ($j=0;$j -lt ($NewNameSplit.count - 1); $j++)
         {
             if ($NewNameSplit[$j] -match $SeasonRegex)
@@ -476,7 +507,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
         }
     }
 
-    #if unable to parse season/episode number, prompt in console session
+    # if unable to parse season/episode number, prompt in console session
     if (!($SeasonNumber -or $EpisodeNumber))
     {
         Write-Warning "Episode or Season number not detected from file name"
@@ -494,7 +525,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
 
     ### Trim leading zeroes from season/episode numbers to match TheTVDB data
 
-    #Double digit number with leading zero
+    # Double digit number with leading zero
     if ($SeasonNumber -match "^0[0-9]$")
     {
         $SeasonTrim = $SeasonNumber[1]
@@ -504,26 +535,26 @@ for ($i=0;$i -lt $Files.Count;$i++)
         $SeasonTrim = $SeasonNumber
     }
 
-    #Episode Number has one digit
+    # Episode Number has one digit
     if ($EpisodeNumber -match "^\d{1}$")
     {
         $EpisodeTrim = $EpisodeNumber
     }
-    #Two digits
+    # Two digits
     elseif ($EpisodeNumber -match "^\d{2}$")
     {
-        #Double digit number with leading zero
+        # Double digit number with leading zero
         if ($EpisodeNumber -match "^0[0-9]$")
         {
             $EpisodeTrim = $EpisodeNumber[1]
         }
-        #Double digit number with non-zero leading number
+        # Double digit number with non-zero leading number
         else
         {
             $EpisodeTrim = $EpisodeNumber
         }
     }
-    #Three digits
+    # Three digits
     elseif ($EpisodeNumber -match "^\d{3}$")
     {
         # Double leading zeroes

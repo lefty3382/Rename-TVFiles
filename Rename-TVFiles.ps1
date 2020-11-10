@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.8.1"
+# ScriptVersion = "1.0.8.2"
 
 ##################################
 # Script Variables
@@ -625,7 +625,7 @@ $SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -Serie
 $EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
 # Verify/create destination folder path
-$DestinationFolderPath = New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.Name -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
+$DestinationFolderPath = New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.seriesName -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
 
 # Eliminate subfolders in target folder
 Remove-SubFolders -DirectoryPath $TargetFolder.FullName

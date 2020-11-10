@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.6.1"
+# ScriptVersion = "1.0.6.2"
 
 ##################################
 # Script Variables
@@ -362,7 +362,7 @@ function Get-EpisodeData {
 function Remove-BadFileTypes {
     [CmdletBinding()]
     param (
-        # Episode Search String
+        # Target directory path
         [Parameter(
             Mandatory = $true,
             Position = 0,
@@ -493,7 +493,7 @@ foreach ($File in $Files)
     if ($File.PSIsContainer -eq $true)
     {
         Write-Output "Subfolder found: $($File.name)"
-        if (($File.Name -match "\bSubs\b|\bSubtitles\b") -or ($File.Name -match "\bSeason"))
+        if (($File.Name -match "(?i)^(Subs|Subtitles)$") -or ($File.Name -match "(?i)^Season"))
         {
             Write-Output "Acceptable subfolder detected: `"$($File.name)`""
             $Subs = Get-ChildItem $File.fullname
@@ -508,7 +508,7 @@ foreach ($File in $Files)
             Remove-Item -LiteralPath $File.FullName -Recurse -Force
         }
         # "Extras" subfolder
-        elseif ($File.Name -match "Extras")
+        elseif ($File.Name -match "(?i)^Extras$")
         {
             $ExtrasFolder = Get-ChildItem -LiteralPath $File.FullName -Force
             if ((($ExtrasFolder | Measure-Object).Count) -gt 0)

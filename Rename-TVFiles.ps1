@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.3.1"
+# ScriptVersion = "1.0.4.0"
 
 ##################################
 # Script Variables
@@ -47,6 +47,8 @@ param
 
 $LoginURL = "https://api.thetvdb.com/login"
 $SeriesSearchURL = "https://api.thetvdb.com/search/series?name="
+$EpisodeSearchURL = "https://api.thetvdb.com/series/"
+$EpisodeSearchString = "/episodes?page=1"
 $WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
 $StandardSeasonEpisodeFormatRegex = '(S|s)(\d{1,4})[ ]{0,1}(E|e|x|-)(\d{1,3})'
 $SeasonRegex = '^(S|s)$'
@@ -101,8 +103,6 @@ function Get-TVorAnimeDirectory {
     }
 }
 
-$TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
-
 function Get-APIToken {
     [CmdletBinding()]
     param (
@@ -111,7 +111,13 @@ function Get-APIToken {
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $false)]
-        [string]$APIKey
+        [string]$APIKey,
+        # TheTVDB API login URL
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [string]$LoginURL
     )
     
     begin
@@ -124,11 +130,10 @@ function Get-APIToken {
         try
         {
             $token = Invoke-RestMethod -Method Post -Uri $LoginURL -Body $ConvertedBody -ContentType 'application/json' -ErrorAction Stop
-            Write-Output "Successfully retrieved new API token"
+            Write-Host "Successfully retrieved new API token"
         }
         catch
         {
-            Write-Warning "Error retrieving API token from `'api.thetvdb.com`'"
             $Error[0]
             exit
         }
@@ -136,7 +141,7 @@ function Get-APIToken {
     
     end
     {
-        return $token
+        return $token.token
     }
 }
 
@@ -195,60 +200,93 @@ function Get-TargetDirectory {
     }
 }
 
+function Get-SeriesData {
+    [CmdletBinding()]
+    param (
+        # Series Search String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true)]
+        [string]$SeriesSearchString,
+
+        # Series Search String
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $true)]
+        [string]$SeriesSearchURL,
+
+        # Path to API key file, JSON format
+        [Parameter(
+            Mandatory = $true,
+            Position = 2,
+            ValueFromPipeline = $true)]
+        [string]$APIToken
+    )
+    
+    begin
+    {
+        $Headers = @{
+            "ContentType" = "application/json"
+            "Authorization" = "Bearer $APIToken"
+        }
+
+        $SeriesSearchURLTotal = $SeriesSearchURL + $SeriesSearchString
+    }
+    
+    process
+    {
+        try
+        {
+            $SeriesData = Invoke-RestMethod -Method Get -Uri $SeriesSearchURLTotal -Headers $Headers -ErrorAction Stop
+
+            if ($SeriesData.data.Count -gt 1)
+            {
+                [int]$i = "0"
+                Write-Output "TVDB search returned $($SeriesSearchData.data.Count) results:"
+                "`n"
+                foreach ($result in $SeriesData.data)
+                {
+                    Write-Output "$i - `"$($result.seriesName)`" ($($result.id))"
+                    $i++
+                }
+                "`n"
+                $Number = Read-Host "Select correct series"
+            }
+            elseif ($SeriesData.data.Count -eq 1)
+            {
+                $Number = "0"
+            }
+            $SeriesName = $SeriesData.data[$Number].seriesName
+            Write-Host "Received series data for: `"$SeriesName`""
+        }
+        catch
+        {
+            Write-Warning "Error searching for TV series: $SeriesSearchString"
+            $Error[0]
+            exit
+        }
+    }
+    
+    end
+    {
+        return $SeriesData.data[$Number]
+    }
+}
+
+$TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
 $TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
 $FolderName = $TargetFolder.Name
 $SeriesSearchString = $FolderName
-$SeriesSearchURLTotal = $SeriesSearchURL + $SeriesSearchString
-
-##################################
-# Get Series data
-##################################
-
 $APIToken = Get-APIToken -APIKey $APIKey
-
-$Headers = @{
-    "ContentType" = "application/json"
-    "Authorization" = "Bearer $($APIToken.token)"
-}
-
-try
-{
-    $SeriesSearchData = Invoke-RestMethod -Method Get -Uri $SeriesSearchURLTotal -Headers $Headers -ErrorAction Stop
-}
-catch
-{
-    Write-Warning "Error searching for TV series: $SeriesSearchString"
-    $Error[0]
-    exit
-}
-
-if ($SeriesSearchData.data.Count -gt 1)
-{
-    [int]$i = "0"
-    Write-Output "TVDB search returned $($SeriesSearchData.data.Count) results:"
-    "`n"
-    foreach ($result in $SeriesSearchData.data)
-    {
-        Write-Output "$i - `"$($result.seriesName)`" ($($result.id))"
-        $i++
-    }
-    "`n"
-    $Number = Read-Host "Select correct series"
-}
-elseif ($SeriesSearchData.data.Count -eq 1)
-{
-    $Number = "0"
-}
-
-Write-Output "Received series data for: `"$($SeriesSearchData.data[$Number].seriesName)`""
+$SeriesSearchData = Get-SeriesData -SeriesSearchString $FolderName -SeriesSearchURL $SeriesSearchURL -APIToken $APIToken
+$SeriesID = $SeriesSearchData.id
 
 ##################################
 # Get Episode data
 ##################################
 
-$EpisodeSearchURL = "https://api.thetvdb.com/series/"
-$SeriesID = $SeriesSearchData.data[$Number].id
-$EpisodeSearchString = "/episodes?page=1"
 $EpisodeSearchURLTotal = $EpisodeSearchURL + $SeriesID + $EpisodeSearchString
 
 try

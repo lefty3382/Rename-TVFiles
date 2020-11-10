@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.5.0"
+# ScriptVersion = "1.0.5.1"
 
 ##################################
 # Script Variables
@@ -701,7 +701,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
 
     # Match episode information to TVDB data
     if ($EpisodeMatch) { Remove-Variable EpisodeMatch }
-    $EpisodeMatch = $episodedata.data | Where-Object { ($_.airedepisodenumber -like $EpisodeTrim) -and ($_.airedseason -like $SeasonTrim) }
+    $EpisodeMatch = $EpisodeData | Where-Object { ($_.airedepisodenumber -like $EpisodeTrim) -and ($_.airedseason -like $SeasonTrim) }
     if ($EpisodeMatch)
     {
         Write-Output "Episode data match found"

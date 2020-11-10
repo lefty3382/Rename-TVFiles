@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.4.0"
+# ScriptVersion = "1.0.4.1"
 
 ##################################
 # Script Variables
@@ -244,14 +244,14 @@ function Get-SeriesData {
             if ($SeriesData.data.Count -gt 1)
             {
                 [int]$i = "0"
-                Write-Output "TVDB search returned $($SeriesSearchData.data.Count) results:"
-                "`n"
+                Write-Host "TVDB search returned $($SeriesSearchData.data.Count) results:"
+                Write-Host "`n"
                 foreach ($result in $SeriesData.data)
                 {
-                    Write-Output "$i - `"$($result.seriesName)`" ($($result.id))"
+                    Write-Host "$i - `"$($result.seriesName)`" ($($result.id))"
                     $i++
                 }
-                "`n"
+                Write-Host "`n"
                 $Number = Read-Host "Select correct series"
             }
             elseif ($SeriesData.data.Count -eq 1)
@@ -279,7 +279,7 @@ $TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
 $TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
 $FolderName = $TargetFolder.Name
 $SeriesSearchString = $FolderName
-$APIToken = Get-APIToken -APIKey $APIKey
+$APIToken = Get-APIToken -APIKey $APIKey -LoginURL $LoginURL
 $SeriesSearchData = Get-SeriesData -SeriesSearchString $FolderName -SeriesSearchURL $SeriesSearchURL -APIToken $APIToken
 $SeriesID = $SeriesSearchData.id
 
@@ -288,6 +288,10 @@ $SeriesID = $SeriesSearchData.id
 ##################################
 
 $EpisodeSearchURLTotal = $EpisodeSearchURL + $SeriesID + $EpisodeSearchString
+$Headers = @{
+    "ContentType" = "application/json"
+    "Authorization" = "Bearer $APIToken"
+}
 
 try
 {
@@ -322,7 +326,7 @@ if ($EpisodeData.links.last -gt 1)
     }
 }
 
-Write-Output "Received episode data for: `"$($SeriesSearchData.data[$Number].seriesName)`""
+Write-Output "Received episode data for: `"$($SeriesSearchData.seriesName)`""
 Write-Output "Episode count: $($EpisodeData.data.Count)"
 "`n"
 

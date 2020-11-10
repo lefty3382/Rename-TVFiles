@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.4.2"
+# ScriptVersion = "1.0.5.0"
 
 ##################################
 # Script Variables
@@ -207,21 +207,21 @@ function Get-SeriesData {
         [Parameter(
             Mandatory = $true,
             Position = 0,
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $false)]
         [string]$SeriesSearchString,
 
         # Series Search String
         [Parameter(
             Mandatory = $true,
             Position = 1,
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $false)]
         [string]$SeriesSearchURL,
 
-        # Path to API key file, JSON format
+        # API token string
         [Parameter(
             Mandatory = $true,
             Position = 2,
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $false)]
         [string]$APIToken
     )
     
@@ -263,8 +263,7 @@ function Get-SeriesData {
         }
         catch
         {
-            Write-Warning "Error searching for TV series: $SeriesSearchString"
-            $Error[0]
+            Write-Host $Error[0]
             exit
         }
     }
@@ -275,72 +274,108 @@ function Get-SeriesData {
     }
 }
 
-$TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
-$TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
-$FolderName = $TargetFolder.Name
-$SeriesSearchString = $FolderName
-$APIToken = Get-APIToken -APIKey $APIKey -LoginURL $LoginURL
-$SeriesSearchData = Get-SeriesData -SeriesSearchString $FolderName -SeriesSearchURL $SeriesSearchURL -APIToken $APIToken
-$SeriesID = $SeriesSearchData.id
+function Get-EpisodeData {
+    [CmdletBinding()]
+    param (
+        # Episode Search String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$EpisodeSearchString,
 
-##################################
-# Get Episode data
-##################################
+        # Episode Search URL
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [string]$EpisodeSearchURL,
 
-$EpisodeSearchURLTotal = $EpisodeSearchURL + $SeriesID + $EpisodeSearchString
-$Headers = @{
-    "ContentType" = "application/json"
-    "Authorization" = "Bearer $APIToken"
-}
-
-try
-{
-    $EpisodeData = Invoke-RestMethod -Method Get -Uri $EpisodeSearchURLTotal -Headers $Headers -ErrorAction Stop
-}
-catch
-{
-    Write-Warning "Error searching for episode data"
-    $Error[0]
-    exit
-}
-
-# For Series with more than 100 episodes, combine results from multiple pages
-if ($EpisodeData.links.last -gt 1)
-{
-    for ([int]$i=2;$i -le $EpisodeData.links.last;$i++)
+        # Series ID
+        [Parameter(
+            Mandatory = $true,
+            Position = 2,
+            ValueFromPipeline = $false)]
+        [string]$SeriesID,
+        
+        # API token string
+            [Parameter(
+            Mandatory = $true,
+            Position = 3,
+            ValueFromPipeline = $false)]
+        [string]$APIToken
+    )
+        
+    begin
     {
-        $EpisodeSearchString = "/episodes?page=$i"
+        $Headers = @{
+            "ContentType" = "application/json"
+            "Authorization" = "Bearer $APIToken"
+        }
+
         $EpisodeSearchURLTotal = $EpisodeSearchURL + $SeriesID + $EpisodeSearchString
+    }
+    
+    process
+    {
         try
         {
-            $NewEpisodeData = Invoke-RestMethod -Method Get -Uri $EpisodeSearchURLTotal -Headers $Headers -ErrorAction Stop
+            $EpisodeData = Invoke-RestMethod -Method Get -Uri $EpisodeSearchURLTotal -Headers $Headers -ErrorAction Stop
+
+            # For Series with more than 100 episodes, combine results from multiple pages
+            if ($EpisodeData.links.last -gt 1)
+            {
+                for ([int]$i=2;$i -le $EpisodeData.links.last;$i++)
+                {
+                    $EpisodeSearchString = "/episodes?page=$i"
+                    $EpisodeSearchURLTotal = $EpisodeSearchURL + $SeriesID + $EpisodeSearchString
+                    try
+                    {
+                        $NewEpisodeData = Invoke-RestMethod -Method Get -Uri $EpisodeSearchURLTotal -Headers $Headers -ErrorAction Stop
+                    }
+                    catch
+                    {
+                        Write-Host $Error[0]
+                        exit
+                    }
+
+                    $EpisodeData.data += $NewEpisodeData.data
+                }
+            }
         }
         catch
         {
-            Write-Warning "Error searching for additional episode data pages"
             $Error[0]
             exit
         }
-
-        $EpisodeData.data += $NewEpisodeData.data
+    }
+    
+    end
+    {
+        Write-Host "Received episode data for: `"$($SeriesSearchData.seriesName)`""
+        Write-Host "Episode count: $($EpisodeData.data.Count)"
+        Write-Host "`n"
+        return $EpisodeData.data
     }
 }
 
-Write-Output "Received episode data for: `"$($SeriesSearchData.seriesName)`""
-Write-Output "Episode count: $($EpisodeData.data.Count)"
-"`n"
+$TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
+$TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
+$APIToken = Get-APIToken -APIKey $APIKey -LoginURL $LoginURL
+$SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -SeriesSearchURL $SeriesSearchURL -APIToken $APIToken
+$EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
 ##################################
 # Verify/create destination folder path
 ##################################
 
 # Determine destination folder/series name
-if ($SeriesSearchData.seriesName -ne $FolderName)
+if ($SeriesSearchData.seriesName -ne $TargetFolder.Name)
 {
     Write-Output "TVDB Series name does not match source folder name"
     Write-Output "Select correct series name:"
     Write-Output "0 - $($SeriesSearchData.seriesName)"
-    Write-Output "1 - $FolderName"
+    Write-Output "1 - $TargetFolder.Name"
     Write-Output "2 - Other"
     "`n"
     $SeriesNameSelection = Read-Host "Selection"
@@ -350,7 +385,7 @@ if ($SeriesSearchData.seriesName -ne $FolderName)
     }
     elseif ($SeriesNameSelection -eq "1")
     {
-        $NewSeriesName = $FolderName
+        $NewSeriesName = $TargetFolder.Name
     }
     elseif ($SeriesNameSelection = "2")
     {

@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.3.0"
+# ScriptVersion = "1.0.3.1"
 
 ##################################
 # Script Variables
@@ -161,18 +161,21 @@ function Get-TargetDirectory {
         if ($SubFolders.count -gt 1)
         {
             [int]$i = "0"
-            "`n"
-            Write-Output "Folder Count: $($SubFolders.count)"
-            "`n"
+
+            Write-Host "`n"
+            Write-Host "Folder Count: $($SubFolders.count)"
+            Write-Host "`n"
+
             foreach ($SubFolder in $SubFolders)
             {
-                Write-Output "$i - `"$($SubFolder.name)`""
+                Write-Host "$i - `"$($SubFolder.name)`""
                 $i++
             }
-            "`n"
+
+            Write-Host "`n"
             $FolderNumber = Read-Host "Select folder"
             $TargetFolder = $SubFolders[$FolderNumber]
-            Write-Output "Processing folder: `"$($TargetFolder.Name)`""
+            Write-Host "Folder selected: `"$($TargetFolder.Name)`""
         }
         elseif ($SubFolders.count -eq 1)
         {
@@ -193,7 +196,7 @@ function Get-TargetDirectory {
 }
 
 $TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
-$FolderName = $SubFolders[$FolderNumber].Name
+$FolderName = $TargetFolder.Name
 $SeriesSearchString = $FolderName
 $SeriesSearchURLTotal = $SeriesSearchURL + $SeriesSearchString
 

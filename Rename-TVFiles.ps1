@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.9.0"
+# ScriptVersion = "1.0.10.0"
 
 ##################################
 # Script Variables
@@ -712,14 +712,71 @@ function Get-SeasonEpisodeNumbersFromString {
             }
             else { exit }
         }
+
+        ### Trim leading zeroes from season/episode numbers to match TheTVDB data
+
+        # Double digit number with leading zero
+        if ($SeasonNumber -match "^0[0-9]$")
+        {
+            $SeasonTrim = $SeasonNumber[1]
+        }
+        else
+        {
+            $SeasonTrim = $SeasonNumber
+        }
+
+        # Episode Number has one digit
+        if ($EpisodeNumber -match "^\d{1}$")
+        {
+            $EpisodeTrim = $EpisodeNumber
+        }
+        # Two digits
+        elseif ($EpisodeNumber -match "^\d{2}$")
+        {
+            # Double digit number with leading zero
+            if ($EpisodeNumber -match "^0[0-9]$")
+            {
+                $EpisodeTrim = $EpisodeNumber[1]
+            }
+            # Double digit number with non-zero leading number
+            else
+            {
+                $EpisodeTrim = $EpisodeNumber
+            }
+        }
+        # Three digits
+        elseif ($EpisodeNumber -match "^\d{3}$")
+        {
+            # Double leading zeroes
+            if ($EpisodeNumber -match "^00[1-9]$")
+            {
+                $EpisodeTrim = $EpisodeNumber[2]
+            }
+            # Single leading zero
+            elseif ($EpisodeNumber -match "^0[1-9][0-9]$")
+            {
+                $EpisodeTrim = $EpisodeNumber[1] + $EpisodeNumber[2]
+            }
+            else
+            {
+                $EpisodeTrim = $EpisodeNumber
+            }
+        }
     }
     
     end
     {
+        Write-Host "Detected filename season number: $SeasonNumber"
+        Write-Host "Detected filename episode number: $EpisodeNumber"
+        Write-Host "Trimmed season number: $SeasonTrim"
+        Write-Host "Trimmed episode number: $EpisodeTrim"
+        
         # Return destination folder name and path
         $Numbers = @{
             "Season" = $SeasonNumber
             "Episode" = $EpisodeNumber
+            "SeasonTrim" = $SeasonTrim
+            "EpisodeTrim" = $EpisodeTrim
         }
         return $Numbers
     }
@@ -767,62 +824,6 @@ for ($i=0;$i -lt $Files.Count;$i++)
     Write-Output "Parsing file: $($CurrentFile.name)"
 
     $NumbersFromFile = Get-SeasonEpisodeNumbersFromString -SourceString $CurrentFile.Name
-
-    Write-Output "Detected filename season number: $($NumbersFromFile.Season)"
-    Write-Output "Detected filename episode number: $($NumbersFromFile.Episode)"
-
-    ### Trim leading zeroes from season/episode numbers to match TheTVDB data
-
-    # Double digit number with leading zero
-    if ($NumbersFromFile.Season -match "^0[0-9]$")
-    {
-        $SeasonTrim = $NumbersFromFile.Season[1]
-    }
-    else
-    {
-        $SeasonTrim = $NumbersFromFile.Season
-    }
-
-    # Episode Number has one digit
-    if ($NumbersFromFile.Episode -match "^\d{1}$")
-    {
-        $EpisodeTrim = $NumbersFromFile.Episode
-    }
-    # Two digits
-    elseif ($NumbersFromFile.Episode -match "^\d{2}$")
-    {
-        # Double digit number with leading zero
-        if ($NumbersFromFile.Episode -match "^0[0-9]$")
-        {
-            $EpisodeTrim = $NumbersFromFile.Episode[1]
-        }
-        # Double digit number with non-zero leading number
-        else
-        {
-            $EpisodeTrim = $NumbersFromFile.Episode
-        }
-    }
-    # Three digits
-    elseif ($NumbersFromFile.Episode -match "^\d{3}$")
-    {
-        # Double leading zeroes
-        if ($NumbersFromFile.Episode -match "^00[1-9]$")
-        {
-            $EpisodeTrim = $NumbersFromFile.Episode[2]
-        }
-        # Single leading zero
-        elseif ($NumbersFromFile.Episode -match "^0[1-9][0-9]$")
-        {
-            $EpisodeTrim = $NumbersFromFile.Episode[1] + $NumbersFromFile.Episode[2]
-        }
-        else
-        {
-            $EpisodeTrim = $NumbersFromFile.Episode
-        }
-    }
-
-    Write-Verbose "Trimmed season number: $SeasonTrim"
-    Write-Verbose "Trimmed episode number: $EpisodeTrim"
 
     # Match episode information to TVDB data
     if ($EpisodeMatch) { Remove-Variable EpisodeMatch }

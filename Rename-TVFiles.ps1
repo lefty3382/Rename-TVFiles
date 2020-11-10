@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.8.0"
+# ScriptVersion = "1.0.8.1"
 
 ##################################
 # Script Variables
@@ -601,6 +601,7 @@ function New-DestinationDirectory {
         {
             Write-Host "Destination folder path detected: `"$DestinationFolderPath`""
         }
+    return $DestinationFolderPath
     }
 }
 
@@ -624,7 +625,7 @@ $SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -Serie
 $EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
 # Verify/create destination folder path
-New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.Name -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
+$DestinationFolderPath = New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.Name -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
 
 # Eliminate subfolders in target folder
 Remove-SubFolders -DirectoryPath $TargetFolder.FullName
@@ -643,8 +644,6 @@ for ($i=0;$i -lt $Files.Count;$i++)
     if ($SeasonNumber) { Remove-Variable SeasonNumber }
     if ($EpisodeNumber) { Remove-Variable EpisodeNumber }
     
-    # $Percent = [math]::Round($i/$Files.Count*100,0)
-    # Write-Progress -Activity "Renaming file $i of $($Files.count)" -PercentComplete $Percent
     $CurrentFile = $Files[$i]
     
     "`n"

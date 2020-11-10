@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.8.3"
+# ScriptVersion = "1.0.9.0"
 
 ##################################
 # Script Variables
@@ -50,11 +50,11 @@ $SeriesSearchURL = "https://api.thetvdb.com/search/series?name="
 $EpisodeSearchURL = "https://api.thetvdb.com/series/"
 $EpisodeSearchString = "/episodes?page=1"
 $global:WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
-$StandardSeasonEpisodeFormatRegex = '(S|s)(\d{1,4})[ ]{0,1}(E|e|x|-)(\d{1,3})'
-$SeasonRegex = '^(S|s)$'
-$EpisodeRegex = '^(E|e|x|-)$'
-$SeasonDigitRegex = '^\d{1,4}$'
-$EpisodeDigitRegex = '^\d{1,3}$'
+$global:StandardSeasonEpisodeFormatRegex = '(S|s)(\d{1,4})[ ]{0,1}(E|e|x|-)(\d{1,3})'
+$global:SeasonRegex = '^(S|s)$'
+$global:EpisodeRegex = '^(E|e|x|-)$'
+$global:SeasonDigitRegex = '^\d{1,4}$'
+$global:EpisodeDigitRegex = '^\d{1,3}$'
 $TVRegex = "(?i)^0|TV$"
 $AnimeRegex = "(?i)^1|Anime$"
 
@@ -618,6 +618,113 @@ function New-DestinationDirectory {
     }
 }
 
+function Get-SeasonEpisodeNumbersFromString {
+    [CmdletBinding()]
+    param (
+        # Source String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$SourceString
+    )
+    
+    begin
+    {
+        # NewName variable used as working file name
+        $NewName = $SourceString
+    }
+    
+    process
+    {
+        # Season and Episode number are in standard format
+        if ($NewName -match $StandardSeasonEpisodeFormatRegex)
+        {
+            Write-Output "File name `"$NewName`" matches standard formatting"
+        }
+        # Season and Episode not in standard format
+        else
+        {
+            Write-Warning "File name does NOT contain standard season and episode format"
+            # Replace uncommon variations
+            $NewName = $NewName.replace(' Chapter ','E')
+            $NewName = $NewName.replace('_season_','S')
+            $NewName = $NewName.replace(' Season ','S')
+            $NewName = $NewName.Replace('_ep_','E')
+            $NewName = $NewName.Replace(' Episode ','E')
+            $NewName = $NewName.Replace('.Series.','S')
+            $NewName = $NewName.Replace(' Series ','S')
+            $NewName = $NewName.Replace('Series','S')
+
+            # if file name matches ' 2x01 ' or ' 2e01 ' or [2x01] or [02x01] or [2e01], replace with S2E01
+            if ($NewName -match ('(\[| )\d{1,4}(E|e|x|-)\d{1,3}(\]| )'))
+            {
+                $NewName = $NewName.Replace('[','S').replace(']','')
+            }
+            # if file name starts with 4 digits for season and episode number
+            elseif ($NewName -match ('^\d{4}'))
+            {
+                $SeasonNumber = $NewName[0] + $NewName[1]
+                $EpisodeNumber = $NewName[2] + $NewName[3]
+            }
+            #if file name starts with 3 digits for season and episode number
+            elseif ($NewName -match ('^\d{3}'))
+            {
+                $SeasonNumber = "0" + $NewName[0]
+                $EpisodeNumber = $NewName[1] + $NewName[2]
+            }
+        }
+        # Parse season/episode numbers from file name if not already done
+        if (!($SeasonNumber -or $EpisodeNumber))
+        {
+            Write-Verbose "Parsing Season\Episode numbers using standard format regex"
+            $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
+
+            # Parse out season/episode number
+            for ($j=0;$j -lt ($NewNameSplit.count - 1); $j++)
+            {
+                if ($NewNameSplit[$j] -match $SeasonRegex)
+                {
+                    if ($NewNameSplit[($j + 1)] -match $SeasonDigitRegex)
+                    {
+                        $SeasonNumber = $NewNameSplit[$j + 1]
+                    }
+                }
+                elseif ($NewNameSplit[$j] -match $EpisodeRegex)
+                {
+                    if ($NewNameSplit[($j + 1)] -match $EpisodeDigitRegex)
+                    {
+                        $EpisodeNumber = $NewNameSplit[$j + 1]
+                    }
+                }
+            }
+        }
+
+        # if unable to parse season/episode number, prompt in console session
+        if (!($SeasonNumber -or $EpisodeNumber))
+        {
+            Write-Warning "Episode or Season number not detected from file name"
+            $Confirm = Read-Host "Input values [y/n]?"
+            if ($Confirm -match "[yY]")
+            {
+                $SeasonNumber = Read-Host "Season Number"
+                $EpisodeNumber = Read-Host "Episode Number"
+            }
+            else { exit }
+        }
+    }
+    
+    end
+    {
+        # Return destination folder name and path
+        $Numbers = @{
+            "Season" = $SeasonNumber
+            "Episode" = $EpisodeNumber
+        }
+        return $Numbers
+    }
+}
+
 ##################################
 # Main
 ##################################
@@ -654,143 +761,63 @@ $Files = Get-ChildItem -LiteralPath $TargetFolder.FullName -Recurse
 
 for ($i=0;$i -lt $Files.Count;$i++)
 {
-    if ($SeasonNumber) { Remove-Variable SeasonNumber }
-    if ($EpisodeNumber) { Remove-Variable EpisodeNumber }
-    
     $CurrentFile = $Files[$i]
     
     "`n"
     Write-Output "Parsing file: $($CurrentFile.name)"
 
-    # NewName variable used as working file name
-    $NewName = $CurrentFile.Name
+    $NumbersFromFile = Get-SeasonEpisodeNumbersFromString -SourceString $CurrentFile.Name
 
-    # Season and Episode number are in standard format
-    if ($NewName -match $StandardSeasonEpisodeFormatRegex)
-    {
-        Write-Output "File name `"$NewName`" matches standard formatting"
-    }
-    # Season and Episode not in standard format
-    else
-    {
-        Write-Warning "File name does NOT contain standard season and episode format"
-        # Replace uncommon variations
-        $NewName = $NewName.replace(' Chapter ','E')
-        $NewName = $NewName.replace('_season_','S')
-        $NewName = $NewName.replace(' Season ','S')
-        $NewName = $NewName.Replace('_ep_','E')
-        $NewName = $NewName.Replace(' Episode ','E')
-        $NewName = $NewName.Replace('.Series.','S')
-        $NewName = $NewName.Replace(' Series ','S')
-        $NewName = $NewName.Replace('Series','S')
-
-        # if file name matches ' 2x01 ' or ' 2e01 ' or [2x01] or [02x01] or [2e01], replace with S2E01
-        if ($NewName -match ('(\[| )\d{1,4}(E|e|x|-)\d{1,3}(\]| )'))
-        {
-            $NewName = $NewName.Replace('[','S').replace(']','')
-        }
-        # if file name starts with 4 digits for season and episode number
-        elseif ($NewName -match ('^\d{4}'))
-        {
-            $SeasonNumber = $NewName[0] + $NewName[1]
-            $EpisodeNumber = $NewName[2] + $NewName[3]
-        }
-        #if file name starts with 3 digits for season and episode number
-        elseif ($NewName -match ('^\d{3}'))
-        {
-            $SeasonNumber = "0" + $NewName[0]
-            $EpisodeNumber = $NewName[1] + $NewName[2]
-        }
-    }
-    # Parse season/episode numbers from file name if not already done
-    if (!($SeasonNumber -or $EpisodeNumber))
-    {
-        Write-Verbose "Parsing Season\Episode numbers using standard format regex"
-        $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
-
-        # Parse out season/episode number
-        for ($j=0;$j -lt ($NewNameSplit.count - 1); $j++)
-        {
-            if ($NewNameSplit[$j] -match $SeasonRegex)
-            {
-                if ($NewNameSplit[($j + 1)] -match $SeasonDigitRegex)
-                {
-                    $SeasonNumber = $NewNameSplit[$j + 1]
-                }
-            }
-            elseif ($NewNameSplit[$j] -match $EpisodeRegex)
-            {
-                if ($NewNameSplit[($j + 1)] -match $EpisodeDigitRegex)
-                {
-                    $EpisodeNumber = $NewNameSplit[$j + 1]
-                }
-            }
-        }
-    }
-
-    # if unable to parse season/episode number, prompt in console session
-    if (!($SeasonNumber -or $EpisodeNumber))
-    {
-        Write-Warning "Episode or Season number not detected from file name"
-        $Confirm = Read-Host "Input values [y/n]?"
-        if ($Confirm -match "[yY]")
-        {
-            $SeasonNumber = Read-Host "Season Number"
-            $EpisodeNumber = Read-Host "Episode Number"
-        }
-        else { exit }
-    }
-
-    Write-Output "Detected filename season number: $SeasonNumber"
-    Write-Output "Detected filename episode number: $EpisodeNumber"
+    Write-Output "Detected filename season number: $($NumbersFromFile.Season)"
+    Write-Output "Detected filename episode number: $($NumbersFromFile.Episode)"
 
     ### Trim leading zeroes from season/episode numbers to match TheTVDB data
 
     # Double digit number with leading zero
-    if ($SeasonNumber -match "^0[0-9]$")
+    if ($NumbersFromFile.Season -match "^0[0-9]$")
     {
-        $SeasonTrim = $SeasonNumber[1]
+        $SeasonTrim = $NumbersFromFile.Season[1]
     }
     else
     {
-        $SeasonTrim = $SeasonNumber
+        $SeasonTrim = $NumbersFromFile.Season
     }
 
     # Episode Number has one digit
-    if ($EpisodeNumber -match "^\d{1}$")
+    if ($NumbersFromFile.Episode -match "^\d{1}$")
     {
-        $EpisodeTrim = $EpisodeNumber
+        $EpisodeTrim = $NumbersFromFile.Episode
     }
     # Two digits
-    elseif ($EpisodeNumber -match "^\d{2}$")
+    elseif ($NumbersFromFile.Episode -match "^\d{2}$")
     {
         # Double digit number with leading zero
-        if ($EpisodeNumber -match "^0[0-9]$")
+        if ($NumbersFromFile.Episode -match "^0[0-9]$")
         {
-            $EpisodeTrim = $EpisodeNumber[1]
+            $EpisodeTrim = $NumbersFromFile.Episode[1]
         }
         # Double digit number with non-zero leading number
         else
         {
-            $EpisodeTrim = $EpisodeNumber
+            $EpisodeTrim = $NumbersFromFile.Episode
         }
     }
     # Three digits
-    elseif ($EpisodeNumber -match "^\d{3}$")
+    elseif ($NumbersFromFile.Episode -match "^\d{3}$")
     {
         # Double leading zeroes
-        if ($EpisodeNumber -match "^00[1-9]$")
+        if ($NumbersFromFile.Episode -match "^00[1-9]$")
         {
-            $EpisodeTrim = $EpisodeNumber[2]
+            $EpisodeTrim = $NumbersFromFile.Episode[2]
         }
         # Single leading zero
-        elseif ($EpisodeNumber -match "^0[1-9][0-9]$")
+        elseif ($NumbersFromFile.Episode -match "^0[1-9][0-9]$")
         {
-            $EpisodeTrim = $EpisodeNumber[1] + $EpisodeNumber[2]
+            $EpisodeTrim = $NumbersFromFile.Episode[1] + $NumbersFromFile.Episode[2]
         }
         else
         {
-            $EpisodeTrim = $EpisodeNumber
+            $EpisodeTrim = $NumbersFromFile.Episode
         }
     }
 
@@ -820,7 +847,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
             $NewEpisodeName = Read-Host "Enter custom episode name"
         }
     
-        $NewFileName = $DestinationFolder.Name + " - " + "S" + $SeasonNumber + "E" + $EpisodeNumber + " - " + $NewEpisodeName + $CurrentFile.extension
+        $NewFileName = $DestinationFolder.Name + " - " + "S" + $NumbersFromFile.Season + "E" + $NumbersFromFile.Episode + " - " + $NewEpisodeName + $CurrentFile.extension
         $NewFilePath = Join-Path $DestinationFolder.Path -ChildPath $NewFileName
         Write-Output "New file name: `"$NewFileName`""
         Write-Output "Moving `"$($CurrentFile.Name)`" to $NewFilePath"

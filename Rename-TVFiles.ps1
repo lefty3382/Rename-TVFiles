@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.4.1"
+# ScriptVersion = "1.0.4.2"
 
 ##################################
 # Script Variables
@@ -335,18 +335,18 @@ Write-Output "Episode count: $($EpisodeData.data.Count)"
 ##################################
 
 # Determine destination folder/series name
-if ($SeriesSearchData.data[$Number].seriesName -ne $FolderName)
+if ($SeriesSearchData.seriesName -ne $FolderName)
 {
     Write-Output "TVDB Series name does not match source folder name"
     Write-Output "Select correct series name:"
-    Write-Output "0 - $($SeriesSearchData.data[$Number].seriesName)"
+    Write-Output "0 - $($SeriesSearchData.seriesName)"
     Write-Output "1 - $FolderName"
     Write-Output "2 - Other"
     "`n"
     $SeriesNameSelection = Read-Host "Selection"
     if ($SeriesNameSelection -eq "0")
     {
-        $NewSeriesName = $SeriesSearchData.data[$Number].seriesName
+        $NewSeriesName = $SeriesSearchData.seriesName
     }
     elseif ($SeriesNameSelection -eq "1")
     {
@@ -364,7 +364,7 @@ if ($SeriesSearchData.data[$Number].seriesName -ne $FolderName)
 }
 else
 {
-    $NewSeriesName = $SeriesSearchData.data[$Number].seriesName
+    $NewSeriesName = $SeriesSearchData.seriesName
 }
 
 # Match series name to regex for windows file names

@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.6.0"
+# ScriptVersion = "1.0.6.1"
 
 ##################################
 # Script Variables
@@ -382,7 +382,7 @@ function Remove-BadFileTypes {
             # Delete .TXT .EXE .NFO files
             if ($File.name -match "(?i)\.(exe|nfo|txt)$")
             {
-                Write-Output "Removing file: $($File.name)"
+                Write-Host "Removing file: $($File.name)"
                 Remove-Item -LiteralPath $File.fullname -Force
             }
         }

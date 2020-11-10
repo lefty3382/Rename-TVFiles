@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.6.2"
+# ScriptVersion = "1.0.7.0"
 
 ##################################
 # Script Variables
@@ -393,10 +393,123 @@ function Remove-BadFileTypes {
     }
 }
 
+function Remove-SubFolders {
+    [CmdletBinding()]
+    param (
+        # Target directory path
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true)]
+        [string]$DirectoryPath
+    )
+    
+    begin
+    {
+        $Files = Get-ChildItem -LiteralPath $DirectoryPath -Recurse -Force
+        Write-Host "Checking for subfolders at path: $DirectoryPath"
+    }
+    
+    process
+    {
+        foreach ($File in $Files)
+        {
+            # Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
+            if ($File.PSIsContainer -eq $true)
+            {
+                Write-Host "Subfolder found: $($File.name)"
+                if (($File.Name -match "(?i)^(Subs|Subtitles)$") -or ($File.Name -match "(?i)^Season"))
+                {
+                    Write-Host "Acceptable subfolder detected: `"$($File.name)`""
+                    $Subs = Get-ChildItem $File.fullname
+                    foreach ($Subfile in $Subs)
+                    {
+                        Write-Host "Moving: $($Subfile.FullName)"
+                        Write-Host "New path: $($TargetFolder.FullName)"
+                        Move-Item -LiteralPath $subfile.fullname -Destination $TargetFolder.FullName -Force
+                    }
+                    # Delete Subfolder
+                    Write-Host "Removing folder: $($File.FullName)"
+                    Remove-Item -LiteralPath $File.FullName -Recurse -Force
+                }
+                # "Extras" subfolder
+                elseif ($File.Name -match "(?i)^Extras$")
+                {
+                    $ExtrasFolder = Get-ChildItem -LiteralPath $File.FullName -Force
+                    if ((($ExtrasFolder | Measure-Object).Count) -gt 0)
+                    {
+                        $ExtrasFolder
+                        "`n"
+                        Write-Host "0 - Move folder to destination folder"
+                        Write-Host "1 - Move child items to current parent folder"
+                        Write-Host "2 - Delete folder"
+                        "`n"
+                        $MoveExtras = Read-Host "Action to perform on `"Extras`" folder"
+
+                        if ($MoveExtras -match "[0]")
+                        {
+                            Move-Item -LiteralPath $File.FullName -Destination $DestinationFolderPath -Force
+                            Write-Host "Moving `"Extras`" folder to destination folder"
+                        }
+                        elseif ($MoveExtras -match "[1]")
+                        {
+                            Write-Host "Moving contents of `"Extras`" folder to parent directory"
+                            foreach ($ExtrasItem in $ExtrasFolder)
+                            {
+                                Move-Item -LiteralPath $ExtrasItem.FullName -Destination $TargetFolder.FullName -Force
+                            }
+                            # Delete empty folder after moving child items
+                            if (((Get-ChildItem $File.FullName | Measure-Object).Count) -eq 0)
+                            {
+                                Write-Host "`"Extras`" folder is empty, deleting folder"
+                                Remove-Item -LiteralPath $File.FullName -Recurse -Force
+                            }
+                        }
+                        elseif ($MoveExtras -match "[2]")
+                        {
+                            Write-Host "Removing folder: $($File.FullName)"
+                            Remove-Item -LiteralPath $File.FullName -Recurse -Force
+                        }
+                        else
+                        {
+                            Write-Host "You are not very smart!" -ForegroundColor Red
+                            Write-Host "That was an invalid answer!" -ForegroundColor Red
+                            Write-Host "As a reward, you have to start over now!" -ForegroundColor Red
+                            exit
+                        }
+                    }
+                }
+                else
+                {
+                    Write-Host "Removing folder: $($File.FullName)"
+                    Remove-Item -LiteralPath $File.FullName -Recurse -Force
+                }
+            }
+        }
+    }
+    
+    end {
+        return
+    }
+}
+
+##################################
+# Main
+##################################
+
+# Select correct media folder according to new media type
 $TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
+
+# Determine target folder for processing
 $TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
+
+# Get API token from TheTVDB
 $APIToken = Get-APIToken -APIKey $APIKey -LoginURL $LoginURL
+
+# Get series data from TheTVDB
 $SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -SeriesSearchURL $SeriesSearchURL -APIToken $APIToken
+
+# Get episode data from TheTVDB
 $EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
 ##################################
@@ -479,93 +592,10 @@ else
     Write-Output "Destination folder path detected: `"$DestinationFolderPath`""
 }
 
-##################################
-# Eliminate subfolders
-##################################
+# Eliminate subfolders in target folder
+Remove-SubFolders -DirectoryPath $TargetFolder.FullName
 
-$Files = Get-ChildItem $TargetFolder.FullName
-
-Write-Output "Checking for subfolders"
-
-foreach ($File in $Files)
-{
-    # Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
-    if ($File.PSIsContainer -eq $true)
-    {
-        Write-Output "Subfolder found: $($File.name)"
-        if (($File.Name -match "(?i)^(Subs|Subtitles)$") -or ($File.Name -match "(?i)^Season"))
-        {
-            Write-Output "Acceptable subfolder detected: `"$($File.name)`""
-            $Subs = Get-ChildItem $File.fullname
-            foreach ($Subfile in $Subs)
-            {
-                Write-Output "Moving: $($Subfile.FullName)"
-                Write-Output "New path: $($TargetFolder.FullName)"
-                Move-Item -LiteralPath $subfile.fullname -Destination $TargetFolder.FullName -Force
-            }
-            # Delete Subfolder
-            Write-Output "Removing folder: $($File.FullName)"
-            Remove-Item -LiteralPath $File.FullName -Recurse -Force
-        }
-        # "Extras" subfolder
-        elseif ($File.Name -match "(?i)^Extras$")
-        {
-            $ExtrasFolder = Get-ChildItem -LiteralPath $File.FullName -Force
-            if ((($ExtrasFolder | Measure-Object).Count) -gt 0)
-            {
-                $ExtrasFolder
-                "`n"
-                Write-Output "0 - Move folder to destination folder"
-                Write-Output "1 - Move child items to current parent folder"
-                Write-Output "2 - Delete folder"
-                "`n"
-                $MoveExtras = Read-Host "Action to perform on `"Extras`" folder"
-
-                if ($MoveExtras -match "[0]")
-                {
-                    Move-Item -LiteralPath $File.FullName -Destination $DestinationFolderPath -Force
-                    Write-Output "Moving `"Extras`" folder to destination folder"
-                }
-                elseif ($MoveExtras -match "[1]")
-                {
-                    Write-Output "Moving contents of `"Extras`" folder to parent directory"
-                    foreach ($ExtrasItem in $ExtrasFolder)
-                    {
-                        Move-Item -LiteralPath $ExtrasItem.FullName -Destination $TargetFolder.FullName -Force
-                    }
-                    # Delete empty folder after moving child items
-                    if (((Get-ChildItem $File.FullName | Measure-Object).Count) -eq 0)
-                    {
-                        Write-Output "`"Extras`" folder is empty, deleting folder"
-                        Remove-Item -LiteralPath $File.FullName -Recurse -Force
-                    }
-                }
-                elseif ($MoveExtras -match "[2]")
-                {
-                    Write-Output "Removing folder: $($File.FullName)"
-                    Remove-Item -LiteralPath $File.FullName -Recurse -Force
-                }
-                else
-                {
-                    Write-Warning "You are not very smart!"
-                    Write-Warning "That was an invalid answer!"
-                    Write-Warning "As a reward, you have to start over now!"
-                    exit
-                }
-            }
-        }
-        else
-        {
-            Write-Output "Removing folder: $($File.FullName)"
-            Remove-Item -LiteralPath $File.FullName -Recurse -Force
-        }
-    }
-}
-
-##################################
-# Remove unnecessary files
-##################################
-
+# Remove unnecessary files in target folder
 Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName
 
 ##################################

@@ -13,31 +13,38 @@
 
 param
 (
-    # Parent directory path
+    # Parent directory path for destination folders
     [Parameter(
         Mandatory = $false,
         Position = 0,
-        ValueFromPipeline = $true)]
+        ValueFromPipeline = $false)]
     [Alias("Source","Path")]
     [string]$SourcePath = "\\192.168.0.64\storage\Film\",
+
+    # Parent directory path for individual download folders
+    [Parameter(
+        Mandatory = $false,
+        Position = 1,
+        ValueFromPipeline = $false)]
+    [Alias("Downloads")]
+    [string]$DownloadsDirectory = "\\192.168.0.64\storage\Film\_New",
 
     # Path to API key file, JSON format
     [Parameter(
         Mandatory = $false,
-        Position = 1,
+        Position = 2,
         ValueFromPipeline = $false)]
     [ValidatePattern("^.*\.json$")]
     [Alias("API","Key")]
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.2.0"
+# ScriptVersion = "1.0.3.0"
 
 ##################################
 # Script Variables
 ##################################
 
-$ConvertedBody = Get-Content $APIKey -Raw
 $LoginURL = "https://api.thetvdb.com/login"
 $SeriesSearchURL = "https://api.thetvdb.com/search/series?name="
 $WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
@@ -46,8 +53,6 @@ $SeasonRegex = '^(S|s)$'
 $EpisodeRegex = '^(E|e|x|-)$'
 $SeasonDigitRegex = '^\d{1,4}$'
 $EpisodeDigitRegex = '^\d{1,3}$'
-$DownloadsDirectory = Join-Path -Path $SourcePath -ChildPath "_New"
-$SubFolders = Get-ChildItem -Path $DownloadsDirectory
 $TVRegex = "(?i)^0|TV$"
 $AnimeRegex = "(?i)^1|Anime$"
 
@@ -98,72 +103,110 @@ function Get-TVorAnimeDirectory {
 
 $TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
 
-# Validate correct source folder
-if ($SubFolders.count -gt 1)
-{
-    [int]$i = "0"
-    "`n"
-    Write-Output "Folder Count: $($SubFolders.count)"
-    "`n"
-    foreach ($SubFolder in $SubFolders)
+function Get-APIToken {
+    [CmdletBinding()]
+    param (
+        # Path to API key file, JSON format
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$APIKey
+    )
+    
+    begin
     {
-        Write-Output "$i - `"$($SubFolder.name)`""
-        $i++
+        $ConvertedBody = Get-Content $APIKey -Raw
     }
-    "`n"
-    $FolderNumber = Read-Host "Select folder"
-    $TargetFolder = $SubFolders[$FolderNumber]
-    Write-Output "Processing folder: `"$($TargetFolder.Name)`""
-}
-elseif ($SubFolders.count -eq 1)
-{
-    $FolderNumber = "0"
-    $Confirm = Read-Host "Use folder: `"$($TargetFolder.Name)`" [y/n]?"
-    if ($Confirm -match "[yY]")
+    
+    process
     {
-        Write-Output "Processing folder: `"$($TargetFolder.Name)`""
+        try
+        {
+            $token = Invoke-RestMethod -Method Post -Uri $LoginURL -Body $ConvertedBody -ContentType 'application/json' -ErrorAction Stop
+            Write-Output "Successfully retrieved new API token"
+        }
+        catch
+        {
+            Write-Warning "Error retrieving API token from `'api.thetvdb.com`'"
+            $Error[0]
+            exit
+        }
     }
-    else
+    
+    end
     {
-        exit
+        return $token
     }
-}
-else
-{
-    Write-Warning "No folders in `"$DownloadsDirectory`" detected"
-    exit
 }
 
+function Get-TargetDirectory {
+    [CmdletBinding()]
+    param (
+        # Parent directory path for individual download folders
+        [Parameter(
+            Mandatory = $false,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$DownloadsDirectory
+    )
+    
+    begin
+    {
+        $SubFolders = Get-ChildItem -Path $DownloadsDirectory
+    }
+    
+    process
+    {
+        if ($SubFolders.count -gt 1)
+        {
+            [int]$i = "0"
+            "`n"
+            Write-Output "Folder Count: $($SubFolders.count)"
+            "`n"
+            foreach ($SubFolder in $SubFolders)
+            {
+                Write-Output "$i - `"$($SubFolder.name)`""
+                $i++
+            }
+            "`n"
+            $FolderNumber = Read-Host "Select folder"
+            $TargetFolder = $SubFolders[$FolderNumber]
+            Write-Output "Processing folder: `"$($TargetFolder.Name)`""
+        }
+        elseif ($SubFolders.count -eq 1)
+        {
+            $FolderNumber = "0"
+        }
+        else
+        {
+            Write-Warning "No folders in `"$DownloadsDirectory`" detected"
+            exit
+        }
+    }
+    
+    end
+    {
+        $TargetFolder = $SubFolders[$FolderNumber]
+        return $TargetFolder
+    }
+}
+
+$TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
 $FolderName = $SubFolders[$FolderNumber].Name
 $SeriesSearchString = $FolderName
 $SeriesSearchURLTotal = $SeriesSearchURL + $SeriesSearchString
 
 ##################################
-# Get API token
-##################################
-
-try
-{
-    $token = Invoke-RestMethod -Method Post -Uri $LoginURL -Body $ConvertedBody -ContentType 'application/json' -ErrorAction Stop
-    Write-Output "Successfully retrieved new API token"
-}
-catch
-{
-    Write-Warning "Error retrieving API token from `'api.thetvdb.com`'"
-    $Error[0]
-    exit
-}
-finally
-{
-    $Headers = @{
-        "ContentType" = "application/json"
-        "Authorization" = "Bearer $($token.token)"
-    }
-}
-
-##################################
 # Get Series data
 ##################################
+
+$APIToken = Get-APIToken -APIKey $APIKey
+
+$Headers = @{
+    "ContentType" = "application/json"
+    "Authorization" = "Bearer $($APIToken.token)"
+}
 
 try
 {

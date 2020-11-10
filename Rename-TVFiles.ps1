@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.5.1"
+# ScriptVersion = "1.0.6.0"
 
 ##################################
 # Script Variables
@@ -49,7 +49,7 @@ $LoginURL = "https://api.thetvdb.com/login"
 $SeriesSearchURL = "https://api.thetvdb.com/search/series?name="
 $EpisodeSearchURL = "https://api.thetvdb.com/series/"
 $EpisodeSearchString = "/episodes?page=1"
-$WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
+$global:WindowsFileNameRegex = '^(?:(?:[a-z]:|\\\\[a-z0-9_.$●-]+\\[a-z0-9_.$●-]+)\\|\\?[^\\\/:*?"<>|\r\n]+\\?)(?:[^\\\/:*?"<>|\r\n]+\\)*[^\\\/:*?"<>|\r\n]*$'
 $StandardSeasonEpisodeFormatRegex = '(S|s)(\d{1,4})[ ]{0,1}(E|e|x|-)(\d{1,3})'
 $SeasonRegex = '^(S|s)$'
 $EpisodeRegex = '^(E|e|x|-)$'
@@ -359,6 +359,40 @@ function Get-EpisodeData {
     }
 }
 
+function Remove-BadFileTypes {
+    [CmdletBinding()]
+    param (
+        # Episode Search String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true)]
+        [string]$DirectoryPath
+    )
+    
+    begin
+    {
+        $Files = Get-ChildItem -LiteralPath $DirectoryPath -Recurse -Force
+    }
+    
+    process
+    {
+        foreach ($File in $Files)
+        {
+            # Delete .TXT .EXE .NFO files
+            if ($File.name -match "(?i)\.(exe|nfo|txt)$")
+            {
+                Write-Output "Removing file: $($File.name)"
+                Remove-Item -LiteralPath $File.fullname -Force
+            }
+        }
+    }
+    
+    end {
+        return
+    }
+}
+
 $TVDirectory = Get-TVorAnimeDirectory -SourcePath $SourcePath
 $TargetFolder = Get-TargetDirectory -DownloadsDirectory $DownloadsDirectory
 $APIToken = Get-APIToken -APIKey $APIKey -LoginURL $LoginURL
@@ -387,7 +421,7 @@ if ($SeriesSearchData.seriesName -ne $TargetFolder.Name)
     {
         $NewSeriesName = $TargetFolder.Name
     }
-    elseif ($SeriesNameSelection = "2")
+    elseif ($SeriesNameSelection -eq "2")
     {
         $NewSeriesName = Read-Host "Enter new series name"
     }
@@ -532,19 +566,7 @@ foreach ($File in $Files)
 # Remove unnecessary files
 ##################################
 
-$Files = Get-ChildItem -LiteralPath $TargetFolder.FullName
-
-foreach ($File in $Files)
-{
-    # Delete .TXT .EXE .NFO files
-    if (($File.name -like "*.nfo") -or
-        ($File.name -like "*.exe") -or
-        ($File.name -like "*.txt"))
-    {
-        Write-Output "Removing file: $($File.name)"
-        Remove-Item -LiteralPath $File.fullname -Force
-    }
-}
+Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName
 
 ##################################
 # Rename files

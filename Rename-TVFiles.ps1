@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.7.0"
+# ScriptVersion = "1.0.8.0"
 
 ##################################
 # Script Variables
@@ -493,6 +493,117 @@ function Remove-SubFolders {
     }
 }
 
+function New-DestinationDirectory {
+    [CmdletBinding()]
+    param (
+        # Series name from database
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$SeriesSearchDataName,
+
+        # Series name from directory path
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [string]$TargetFolderName,
+
+        # Selected media folder
+        [Parameter(
+            Mandatory = $true,
+            Position = 2,
+            ValueFromPipeline = $false)]
+        [string]$TVDirectory
+    )
+    
+    begin
+    {
+        # Determine destination folder/series name
+        if ($SeriesSearchDataName -ne $TargetFolderName)
+        {
+            Write-Host "TVDB Series name does not match source folder name"
+            Write-Host "Select correct series name:"
+            Write-Host "0 - $SeriesSearchDataName"
+            Write-Host "1 - $TargetFolderName"
+            Write-Host "2 - Other"
+            Write-Host "`n"
+            $SeriesNameSelection = Read-Host "Selection"
+            if ($SeriesNameSelection -eq "0")
+            {
+                $NewSeriesName = $SeriesSearchDataName
+            }
+            elseif ($SeriesNameSelection -eq "1")
+            {
+                $NewSeriesName = $TargetFolderName
+            }
+            elseif ($SeriesNameSelection -eq "2")
+            {
+                $NewSeriesName = Read-Host "Enter new series name"
+            }
+            else
+            {
+                Write-Host "Invalid response! Please type in correct series name" -ForegroundColor Yellow
+                $NewSeriesName = Read-Host "Last chance moron"
+            }
+        }
+        else
+        {
+            $NewSeriesName = $SeriesSearchDataName
+        }
+    }
+    
+    process
+    {
+        # Match series name to regex for windows file names
+        if ($NewSeriesName -notmatch $WindowsFileNameRegex)
+        {
+            Write-Host "Series name does not conform to Windows file name rules" -ForegroundColor Yellow
+            $TryAgainSeriesName = Read-Host "Enter in a different series name"
+            if ($TryAgainSeriesName -match $WindowsFileNameRegex)
+            {
+                $DestinationFolderPath = Join-Path -Path $TVDirectory -ChildPath $TryAgainSeriesName
+            }
+            else
+            {
+                Write-Host "NewsSeries name STILL does not conform to Windows file name rules" -ForegroundColor Red
+                Write-Host "Clearly you need time to think things over" -ForegroundColor Red
+                Write-Host "Exiting..." -ForegroundColor Red
+                exit
+            }
+        }
+        else
+        {
+            $DestinationFolderPath = Join-Path -Path $TVDirectory -ChildPath $NewSeriesName
+        }
+    }
+    
+    end
+    {
+        # Create destination folder if doesn't exist
+        if (!(Test-Path $DestinationFolderPath))
+        {
+            Write-Host "Destination folder `"$DestinationFolderPath`" does not exist"
+            Write-Host "Creating destination folder `"$DestinationFolderPath`""
+            try
+            {
+                New-Item -Path $TVDirectory -Name $NewSeriesName -ItemType Directory -ErrorAction Stop | Out-Null
+                Write-Host "Successfully created destination folder: `"$DestinationFolderPath`""
+            }
+            catch
+            {
+                Write-Host "Failed to create destination folder: `"$DestinationFolderPath`"" -ForegroundColor Red
+                exit
+            }
+        }
+        else
+        {
+            Write-Host "Destination folder path detected: `"$DestinationFolderPath`""
+        }
+    }
+}
+
 ##################################
 # Main
 ##################################
@@ -512,85 +623,8 @@ $SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -Serie
 # Get episode data from TheTVDB
 $EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
-##################################
 # Verify/create destination folder path
-##################################
-
-# Determine destination folder/series name
-if ($SeriesSearchData.seriesName -ne $TargetFolder.Name)
-{
-    Write-Output "TVDB Series name does not match source folder name"
-    Write-Output "Select correct series name:"
-    Write-Output "0 - $($SeriesSearchData.seriesName)"
-    Write-Output "1 - $TargetFolder.Name"
-    Write-Output "2 - Other"
-    "`n"
-    $SeriesNameSelection = Read-Host "Selection"
-    if ($SeriesNameSelection -eq "0")
-    {
-        $NewSeriesName = $SeriesSearchData.seriesName
-    }
-    elseif ($SeriesNameSelection -eq "1")
-    {
-        $NewSeriesName = $TargetFolder.Name
-    }
-    elseif ($SeriesNameSelection -eq "2")
-    {
-        $NewSeriesName = Read-Host "Enter new series name"
-    }
-    else
-    {
-        Write-Warning "Invalid response! Please type in correct series name"
-        $NewSeriesName = Read-Host "Last chance moron"
-    }
-}
-else
-{
-    $NewSeriesName = $SeriesSearchData.seriesName
-}
-
-# Match series name to regex for windows file names
-if ($NewSeriesName -notmatch $WindowsFileNameRegex)
-{
-    Write-Warning "Series name does not conform to Windows file name rules"
-    $TryAgainSeriesName = Read-Host "Enter in a different series name"
-    if ($TryAgainSeriesName -match $WindowsFileNameRegex)
-    {
-        $DestinationFolderPath = Join-Path -Path $TVDirectory -ChildPath $TryAgainSeriesName
-    }
-    else
-    {
-        Write-Warning "NewsSeries name STILL does not conform to Windows file name rules"
-        Write-Warning "Clearly you need time to think things over"
-        Write-Warning "Exiting..."
-        exit
-    }
-}
-else
-{
-    $DestinationFolderPath = Join-Path -Path $TVDirectory -ChildPath $NewSeriesName
-}
-
-# Create destination folder if doesn't exist
-if (!(Test-Path $DestinationFolderPath))
-{
-    Write-Output "Destination folder `"$DestinationFolderPath`" does not exist"
-    Write-Output "Creating destination folder `"$DestinationFolderPath`""
-    try
-    {
-        New-Item -Path $TVDirectory -Name $NewSeriesName -ItemType Directory -ErrorAction Stop | Out-Null
-        Write-Output "Successfully created destination folder: `"$DestinationFolderPath`""
-    }
-    catch
-    {
-        Write-Warning "Failed to create destination folder: `"$DestinationFolderPath`""
-        exit
-    }
-}
-else
-{
-    Write-Output "Destination folder path detected: `"$DestinationFolderPath`""
-}
+New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.Name -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
 
 # Eliminate subfolders in target folder
 Remove-SubFolders -DirectoryPath $TargetFolder.FullName

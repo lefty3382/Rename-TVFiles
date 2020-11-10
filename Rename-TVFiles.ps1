@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.8.2"
+# ScriptVersion = "1.0.8.3"
 
 ##################################
 # Script Variables
@@ -401,7 +401,14 @@ function Remove-SubFolders {
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true)]
-        [string]$DirectoryPath
+        [string]$DirectoryPath,
+
+        # Destination directory path
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true)]
+        [string]$DestinationFolderPath
     )
     
     begin
@@ -456,7 +463,7 @@ function Remove-SubFolders {
                             Write-Host "Moving contents of `"Extras`" folder to parent directory"
                             foreach ($ExtrasItem in $ExtrasFolder)
                             {
-                                Move-Item -LiteralPath $ExtrasItem.FullName -Destination $TargetFolder.FullName -Force
+                                Move-Item -LiteralPath $ExtrasItem.FullName -Destination $DirectoryPath -Force
                             }
                             # Delete empty folder after moving child items
                             if (((Get-ChildItem $File.FullName | Measure-Object).Count) -eq 0)
@@ -601,7 +608,13 @@ function New-DestinationDirectory {
         {
             Write-Host "Destination folder path detected: `"$DestinationFolderPath`""
         }
-    return $DestinationFolderPath
+    
+    # Return destination folder name and path
+    $DestinationFolder = @{
+        "Name" = $NewSeriesName
+        "Path" = $DestinationFolderPath
+    }
+    return $DestinationFolder
     }
 }
 
@@ -625,10 +638,10 @@ $SeriesSearchData = Get-SeriesData -SeriesSearchString $TargetFolder.Name -Serie
 $EpisodeData = Get-EpisodeData -EpisodeSearchString $EpisodeSearchString -EpisodeSearchURL $EpisodeSearchURL -SeriesID $SeriesSearchData.id -APIToken $APIToken
 
 # Verify/create destination folder path
-$DestinationFolderPath = New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.seriesName -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
+$DestinationFolder = New-DestinationDirectory -SeriesSearchDataName $SeriesSearchData.seriesName -TargetFolderName $TargetFolder.Name -TVDirectory $TVDirectory
 
 # Eliminate subfolders in target folder
-Remove-SubFolders -DirectoryPath $TargetFolder.FullName
+Remove-SubFolders -DirectoryPath $TargetFolder.FullName -DestinationFolderPath $DestinationFolder.Path
 
 # Remove unnecessary files in target folder
 Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName
@@ -807,8 +820,8 @@ for ($i=0;$i -lt $Files.Count;$i++)
             $NewEpisodeName = Read-Host "Enter custom episode name"
         }
     
-        $NewFileName = $NewSeriesName + " - " + "S" + $SeasonNumber + "E" + $EpisodeNumber + " - " + $NewEpisodeName + $CurrentFile.extension
-        $NewFilePath = Join-Path $DestinationFolderPath -ChildPath $NewFileName
+        $NewFileName = $DestinationFolder.Name + " - " + "S" + $SeasonNumber + "E" + $EpisodeNumber + " - " + $NewEpisodeName + $CurrentFile.extension
+        $NewFilePath = Join-Path $DestinationFolder.Path -ChildPath $NewFileName
         Write-Output "New file name: `"$NewFileName`""
         Write-Output "Moving `"$($CurrentFile.Name)`" to $NewFilePath"
         Move-Item -LiteralPath $CurrentFile.FullName -Destination $NewFilePath -Force

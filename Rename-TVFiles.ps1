@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.11.2"
+# ScriptVersion = "1.0.11.3"
 
 ##################################
 # Script Variables
@@ -252,7 +252,7 @@ function Get-SeriesData {
                     $i++
                 }
                 Write-Host "`n"
-                $Number = Read-Host "Select correct series" -ForegroundColor Yellow
+                $Number = Read-Host "Select correct series"
             }
             elseif ($SeriesData.data.Count -eq 1)
             {
@@ -414,7 +414,7 @@ function Remove-SubFolders {
     begin
     {
         $Files = Get-ChildItem -LiteralPath $DirectoryPath -Recurse -Force
-        Write-Host "Checking for subfolders at path: $DirectoryPath"
+        Write-Host "Checking for subfolders at path: $DirectoryPath"  -ForegroundColor Yellow
     }
     
     process
@@ -677,7 +677,7 @@ function Get-SeasonEpisodeNumbersFromString {
         # Parse season/episode numbers from file name if not already done
         if (!($SeasonNumber -or $EpisodeNumber))
         {
-            Write-Host "Parsing Season\Episode numbers using standard format regex"
+            Write-Host "Parsing Season\Episode numbers using standard format regex" -ForegroundColor Yellow
             $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
 
             # Parse out season/episode number
@@ -879,11 +879,12 @@ function Move-FileAndRename {
     
     process
     {
-        Write-Host "New file name: `"$DestinationEpisodeName`""
-        Write-Host "Moving `"$CurrentFileFullname`" to $NewFilePath"
+        Write-Host "New file name: `"$DestinationEpisodeName`"" -ForegroundColor Yellow
+        Write-Host "Moving `"$CurrentFileFullname`" to $NewFilePath" -ForegroundColor Yellow
         try
         {
             Move-Item -LiteralPath $CurrentFileFullname -Destination $NewFilePath -Force -ErrorAction Stop
+            Write-Host "Successfully moved file: $NewFilePath" -ForegroundColor Green
         }
         catch
         {
@@ -934,7 +935,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
     $CurrentFile = $Files[$i]
     
     "`n"
-    Write-Host "Parsing file: $($CurrentFile.name)"
+    Write-Host "Parsing file: $($CurrentFile.name)" -ForegroundColor Yellow
 
     # Get Season/Episode numbers from file name
     $NumbersFromFile = Get-SeasonEpisodeNumbersFromString -SourceString $CurrentFile.Name

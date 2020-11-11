@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.10.1"
+# ScriptVersion = "1.0.11.1"
 
 ##################################
 # Script Variables
@@ -782,6 +782,122 @@ function Get-SeasonEpisodeNumbersFromString {
     }
 }
 
+function Get-NewEpisodeName {
+    [CmdletBinding()]
+    param (
+        # Source String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [array]$EpisodeDataObject,
+
+        # Source String
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [array]$NumbersFromFile
+    )
+    
+    begin
+    {
+        $EpisodeMatch = $EpisodeDataObject | Where-Object { ($_.airedepisodenumber -like $NumbersFromFile.EpisodeTrim) -and ($_.airedseason -like $NumbersFromFile.SeasonTrim) }
+    }
+    
+    process
+    {
+        if ($EpisodeMatch)
+        {
+            Write-Host "Episode data match found"
+            Write-Host "Episode name: $($EpisodeMatch.episodeName)"
+            Write-Host "DB Season number: $($EpisodeMatch.airedSeason)"
+            Write-Host "DB Episode number: $($EpisodeMatch.airedEpisodeNumber)"
+            $NewEpisodeName = $EpisodeMatch.episodeName.replace(":"," -")
+            $NewEpisodeName = $NewEpisodeName.replace("/",", ")
+            $NewEpisodeName = $NewEpisodeName.replace(" / ",", ")
+            $NewEpisodeName = $NewEpisodeName.replace("`"","'")
+            $NewEpisodeName = $NewEpisodeName.replace("\?", "")
+            $NewEpisodeName = $NewEpisodeName.replace("?", "")
+            Write-Host "Updated episode name: `"$NewEpisodeName`""
+    
+            if ($NewEpisodeName -notmatch $WindowsFileNameRegex)
+            {
+                Write-Host "Episode name does NOT conform to Windows file name rules" -ForegroundColor Yellow
+                $NewEpisodeName = Read-Host "Enter custom episode name"
+            }
+        
+            $NewFileName = $DestinationFolder.Name + " - " + "S" + $NumbersFromFile.Season + "E" + $NumbersFromFile.Episode + " - " + $NewEpisodeName + $CurrentFile.extension
+        }
+        else
+        {
+            Write-Host "Could not find matching episode data from TVDB" -ForegroundColor Yellow
+            Write-Host "Season query: $($NumbersFromFile.SeasonTrim)" -ForegroundColor Yellow
+            Write-Host "Episode query: $($NumbersFromFile.EpisodeTrim)" -ForegroundColor Yellow
+        }
+    }
+    
+    end
+    {
+        if ($NewFileName)
+        {
+            return $NewFileName
+        }
+        else
+        {
+            return "Error"
+        }
+    }
+}
+
+function Move-FileAndRename {
+    [CmdletBinding()]
+    param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $false)]
+        [string]$DestinationFolderPath,
+
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [string]$DestinationEpisodeName,
+
+        [Parameter(
+            Mandatory = $true,
+            Position = 2,
+            ValueFromPipeline = $false)]
+        [string]$CurrentFileFullname
+    )
+    
+    begin
+    {
+        $NewFilePath = Join-Path $DestinationFolderPath -ChildPath $DestinationEpisodeName
+    }
+    
+    process
+    {
+        Write-Host "New file name: `"$DestinationEpisodeName`""
+        Write-Host "Moving `"$CurrentFileFullname`" to $NewFilePath"
+        try
+        {
+            Move-Item -LiteralPath $CurrentFileFullname -Destination $NewFilePath -Force -ErrorAction Stop
+        }
+        catch
+        {
+            Write-Host "Failed to move/rename file: $CurrentFileFullname" -ForegroundColor Red
+            Read-Host "Press any key to continue"
+        }
+    }
+    
+    end
+    {
+        return
+    }
+}
+
 ##################################
 # Main
 ##################################
@@ -810,10 +926,7 @@ Remove-SubFolders -DirectoryPath $TargetFolder.FullName -DestinationFolderPath $
 # Remove unnecessary files in target folder
 Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName
 
-##################################
-# Rename files
-##################################
-
+# Loop through files
 $Files = Get-ChildItem -LiteralPath $TargetFolder.FullName -Recurse
 
 for ($i=0;$i -lt $Files.Count;$i++)
@@ -821,49 +934,14 @@ for ($i=0;$i -lt $Files.Count;$i++)
     $CurrentFile = $Files[$i]
     
     "`n"
-    Write-Output "Parsing file: $($CurrentFile.name)"
+    Write-Host "Parsing file: $($CurrentFile.name)"
 
+    # Get Season/Episode numbers from file name
     $NumbersFromFile = Get-SeasonEpisodeNumbersFromString -SourceString $CurrentFile.Name
 
-    # Match episode information to TVDB data
-    if ($EpisodeMatch) { Remove-Variable EpisodeMatch }
-    $EpisodeMatch = $EpisodeData | Where-Object { ($_.airedepisodenumber -like $NumbersFromFile.EpisodeTrim) -and ($_.airedseason -like $NumbersFromFile.SeasonTrim) }
-    if ($EpisodeMatch)
-    {
-        Write-Output "Episode data match found"
-        Write-Output "Episode name: $($EpisodeMatch.episodeName)"
-        Write-Output "DB Season number: $($EpisodeMatch.airedSeason)"
-        Write-Output "DB Episode number: $($EpisodeMatch.airedEpisodeNumber)"
-        $NewEpisodeName = $EpisodeMatch.episodeName.replace(":"," -")
-        $NewEpisodeName = $NewEpisodeName.replace("/",", ")
-        $NewEpisodeName = $NewEpisodeName.replace(" / ",", ")
-        $NewEpisodeName = $NewEpisodeName.replace("`"","'")
-        $NewEpisodeName = $NewEpisodeName.replace("\?", "")
-        $NewEpisodeName = $NewEpisodeName.replace("?", "")
-        Write-Output "Updated episode name: `"$NewEpisodeName`""
+    # Get new episode name from DB match
+    $NewEpisodeName = Get-NewEpisodeName -EpisodeDataObject $EpisodeData -NumbersFromFile $NumbersFromFile
 
-        if ($NewEpisodeName -notmatch $WindowsFileNameRegex)
-        {
-            Write-Warning "Episode name does NOT conform to Windows file name rules"
-            $NewEpisodeName = Read-Host "Enter custom episode name"
-        }
-    
-        $NewFileName = $DestinationFolder.Name + " - " + "S" + $NumbersFromFile.Season + "E" + $NumbersFromFile.Episode + " - " + $NewEpisodeName + $CurrentFile.extension
-        $NewFilePath = Join-Path $DestinationFolder.Path -ChildPath $NewFileName
-        Write-Output "New file name: `"$NewFileName`""
-        Write-Output "Moving `"$($CurrentFile.Name)`" to $NewFilePath"
-        Move-Item -LiteralPath $CurrentFile.FullName -Destination $NewFilePath -Force
-    }
-    else
-    {
-        Write-Warning "Could not find matching episode data from TVDB"
-        Write-Warning "Season query: $($NumbersFromFile.SeasonTrim)"
-        Write-Warning "Episode query: $($NumbersFromFile.EpisodeTrim)"
-        $Confirm = Read-Host "Continue [y/n]?"
-        if ($Confirm -match "[yY]")
-        {
-            Write-Output "Proceeding to next file"
-        }
-        else { exit }
-    }
+    # Move file to final destination and rename
+    Move-FileAndRename -DestinationFolderPath $DestinationFolder.Path -DestinationEpisodeName $NewEpisodeName -CurrentFileFullname $CurrentFile.FullName
 }

@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.11.1"
+# ScriptVersion = "1.0.11.2"
 
 ##################################
 # Script Variables
@@ -90,9 +90,9 @@ function Get-TVorAnimeDirectory {
         }
         else
         {
-            Write-Warning "You are not very smart!"
-            Write-Warning "That was an invalid answer!"
-            Write-Warning "As a reward, you have to start over now!"
+            Write-Host "You are not very smart!" -ForegroundColor Yellow
+            Write-Host "That was an invalid answer!" -ForegroundColor Yellow
+            Write-Host "As a reward, you have to start over now!" -ForegroundColor Yellow
             exit
         }
     }
@@ -130,7 +130,7 @@ function Get-APIToken {
         try
         {
             $token = Invoke-RestMethod -Method Post -Uri $LoginURL -Body $ConvertedBody -ContentType 'application/json' -ErrorAction Stop
-            Write-Host "Successfully retrieved new API token"
+            Write-Host "Successfully retrieved new API token" -ForegroundColor Green
         }
         catch
         {
@@ -168,19 +168,19 @@ function Get-TargetDirectory {
             [int]$i = "0"
 
             Write-Host "`n"
-            Write-Host "Folder Count: $($SubFolders.count)"
+            Write-Host "Folder Count: $($SubFolders.count)" -ForegroundColor Yellow
             Write-Host "`n"
 
             foreach ($SubFolder in $SubFolders)
             {
-                Write-Host "$i - `"$($SubFolder.name)`""
+                Write-Host "$i - `"$($SubFolder.name)`"" -ForegroundColor Yellow
                 $i++
             }
 
             Write-Host "`n"
             $FolderNumber = Read-Host "Select folder"
             $TargetFolder = $SubFolders[$FolderNumber]
-            Write-Host "Folder selected: `"$($TargetFolder.Name)`""
+            Write-Host "Folder selected: `"$($TargetFolder.Name)`"" -ForegroundColor Yellow
         }
         elseif ($SubFolders.count -eq 1)
         {
@@ -188,7 +188,7 @@ function Get-TargetDirectory {
         }
         else
         {
-            Write-Warning "No folders in `"$DownloadsDirectory`" detected"
+            Write-Host "No folders in `"$DownloadsDirectory`" detected" -ForegroundColor Yellow
             exit
         }
     }
@@ -244,22 +244,22 @@ function Get-SeriesData {
             if ($SeriesData.data.Count -gt 1)
             {
                 [int]$i = "0"
-                Write-Host "TVDB search returned $($SeriesSearchData.data.Count) results:"
+                Write-Host "TVDB search returned $($SeriesData.data.Count) results:" -ForegroundColor Yellow
                 Write-Host "`n"
                 foreach ($result in $SeriesData.data)
                 {
-                    Write-Host "$i - `"$($result.seriesName)`" ($($result.id))"
+                    Write-Host "$i - `"$($result.seriesName)`" ($($result.id))" -ForegroundColor Yellow
                     $i++
                 }
                 Write-Host "`n"
-                $Number = Read-Host "Select correct series"
+                $Number = Read-Host "Select correct series" -ForegroundColor Yellow
             }
             elseif ($SeriesData.data.Count -eq 1)
             {
                 $Number = "0"
             }
             $SeriesName = $SeriesData.data[$Number].seriesName
-            Write-Host "Received series data for: `"$SeriesName`""
+            Write-Host "Received series data for: `"$SeriesName`"" -ForegroundColor Green
         }
         catch
         {
@@ -352,8 +352,8 @@ function Get-EpisodeData {
     
     end
     {
-        Write-Host "Received episode data for: `"$($SeriesSearchData.seriesName)`""
-        Write-Host "Episode count: $($EpisodeData.data.Count)"
+        Write-Host "Received episode data for: `"$($SeriesSearchData.seriesName)`"" -ForegroundColor Green
+        Write-Host "Episode count: $($EpisodeData.data.Count)" -ForegroundColor Green
         Write-Host "`n"
         return $EpisodeData.data
     }
@@ -382,7 +382,7 @@ function Remove-BadFileTypes {
             # Delete .TXT .EXE .NFO files
             if ($File.name -match "(?i)\.(exe|nfo|txt)$")
             {
-                Write-Host "Removing file: $($File.name)"
+                Write-Host "Removing file: $($File.name)" -ForegroundColor Yellow
                 Remove-Item -LiteralPath $File.fullname -Force
             }
         }
@@ -424,19 +424,19 @@ function Remove-SubFolders {
             # Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
             if ($File.PSIsContainer -eq $true)
             {
-                Write-Host "Subfolder found: $($File.name)"
+                Write-Host "Subfolder found: $($File.name)" -ForegroundColor Yellow
                 if (($File.Name -match "(?i)^(Subs|Subtitles)$") -or ($File.Name -match "(?i)^Season"))
                 {
                     Write-Host "Acceptable subfolder detected: `"$($File.name)`""
                     $Subs = Get-ChildItem $File.fullname
                     foreach ($Subfile in $Subs)
                     {
-                        Write-Host "Moving: $($Subfile.FullName)"
-                        Write-Host "New path: $($TargetFolder.FullName)"
+                        Write-Host "Moving: $($Subfile.FullName)" -ForegroundColor Yellow
+                        Write-Host "New path: $($TargetFolder.FullName)" -ForegroundColor Yellow
                         Move-Item -LiteralPath $subfile.fullname -Destination $TargetFolder.FullName -Force
                     }
                     # Delete Subfolder
-                    Write-Host "Removing folder: $($File.FullName)"
+                    Write-Host "Removing folder: $($File.FullName)" -ForegroundColor Yellow
                     Remove-Item -LiteralPath $File.FullName -Recurse -Force
                 }
                 # "Extras" subfolder
@@ -447,16 +447,16 @@ function Remove-SubFolders {
                     {
                         $ExtrasFolder
                         "`n"
-                        Write-Host "0 - Move folder to destination folder"
-                        Write-Host "1 - Move child items to current parent folder"
-                        Write-Host "2 - Delete folder"
+                        Write-Host "0 - Move folder to destination folder" -ForegroundColor Yellow
+                        Write-Host "1 - Move child items to current parent folder" -ForegroundColor Yellow
+                        Write-Host "2 - Delete folder" -ForegroundColor Yellow
                         "`n"
                         $MoveExtras = Read-Host "Action to perform on `"Extras`" folder"
 
                         if ($MoveExtras -match "[0]")
                         {
                             Move-Item -LiteralPath $File.FullName -Destination $DestinationFolderPath -Force
-                            Write-Host "Moving `"Extras`" folder to destination folder"
+                            Write-Host "Moving `"Extras`" folder to destination folder" -ForegroundColor Yellow
                         }
                         elseif ($MoveExtras -match "[1]")
                         {
@@ -468,13 +468,13 @@ function Remove-SubFolders {
                             # Delete empty folder after moving child items
                             if (((Get-ChildItem $File.FullName | Measure-Object).Count) -eq 0)
                             {
-                                Write-Host "`"Extras`" folder is empty, deleting folder"
+                                Write-Host "`"Extras`" folder is empty, deleting folder" -ForegroundColor Yellow
                                 Remove-Item -LiteralPath $File.FullName -Recurse -Force
                             }
                         }
                         elseif ($MoveExtras -match "[2]")
                         {
-                            Write-Host "Removing folder: $($File.FullName)"
+                            Write-Host "Removing folder: $($File.FullName)" -ForegroundColor Yellow
                             Remove-Item -LiteralPath $File.FullName -Recurse -Force
                         }
                         else
@@ -488,7 +488,7 @@ function Remove-SubFolders {
                 }
                 else
                 {
-                    Write-Host "Removing folder: $($File.FullName)"
+                    Write-Host "Removing folder: $($File.FullName)" -ForegroundColor Yellow
                     Remove-Item -LiteralPath $File.FullName -Recurse -Force
                 }
             }
@@ -530,11 +530,11 @@ function New-DestinationDirectory {
         # Determine destination folder/series name
         if ($SeriesSearchDataName -ne $TargetFolderName)
         {
-            Write-Host "TVDB Series name does not match source folder name"
-            Write-Host "Select correct series name:"
-            Write-Host "0 - $SeriesSearchDataName"
-            Write-Host "1 - $TargetFolderName"
-            Write-Host "2 - Other"
+            Write-Host "TVDB Series name does not match source folder name" -ForegroundColor Yellow
+            Write-Host "Select correct series name:" -ForegroundColor Yellow
+            Write-Host "0 - $SeriesSearchDataName" -ForegroundColor Yellow
+            Write-Host "1 - $TargetFolderName" -ForegroundColor Yellow
+            Write-Host "2 - Other" -ForegroundColor Yellow
             Write-Host "`n"
             $SeriesNameSelection = Read-Host "Selection"
             if ($SeriesNameSelection -eq "0")
@@ -547,7 +547,7 @@ function New-DestinationDirectory {
             }
             elseif ($SeriesNameSelection -eq "2")
             {
-                $NewSeriesName = Read-Host "Enter new series name"
+                $NewSeriesName = Read-Host "Enter new series name" -ForegroundColor Yellow
             }
             else
             {
@@ -591,12 +591,12 @@ function New-DestinationDirectory {
         # Create destination folder if doesn't exist
         if (!(Test-Path $DestinationFolderPath))
         {
-            Write-Host "Destination folder `"$DestinationFolderPath`" does not exist"
-            Write-Host "Creating destination folder `"$DestinationFolderPath`""
+            Write-Host "Destination folder `"$DestinationFolderPath`" does not exist" -ForegroundColor Yellow
+            Write-Host "Creating destination folder `"$DestinationFolderPath`"" -ForegroundColor Yellow
             try
             {
                 New-Item -Path $TVDirectory -Name $NewSeriesName -ItemType Directory -ErrorAction Stop | Out-Null
-                Write-Host "Successfully created destination folder: `"$DestinationFolderPath`""
+                Write-Host "Successfully created destination folder: `"$DestinationFolderPath`"" -for Green
             }
             catch
             {
@@ -606,7 +606,7 @@ function New-DestinationDirectory {
         }
         else
         {
-            Write-Host "Destination folder path detected: `"$DestinationFolderPath`""
+            Write-Host "Destination folder path detected: `"$DestinationFolderPath`"" -ForegroundColor Green
         }
     
     # Return destination folder name and path
@@ -640,12 +640,12 @@ function Get-SeasonEpisodeNumbersFromString {
         # Season and Episode number are in standard format
         if ($NewName -match $StandardSeasonEpisodeFormatRegex)
         {
-            Write-Output "File name `"$NewName`" matches standard formatting"
+            Write-Host "File name `"$NewName`" matches standard formatting" -ForegroundColor Green
         }
         # Season and Episode not in standard format
         else
         {
-            Write-Warning "File name does NOT contain standard season and episode format"
+            Write-Host "File name does NOT contain standard season and episode format" -ForegroundColor Yellow
             # Replace uncommon variations
             $NewName = $NewName.replace(' Chapter ','E')
             $NewName = $NewName.replace('_season_','S')
@@ -677,7 +677,7 @@ function Get-SeasonEpisodeNumbersFromString {
         # Parse season/episode numbers from file name if not already done
         if (!($SeasonNumber -or $EpisodeNumber))
         {
-            Write-Verbose "Parsing Season\Episode numbers using standard format regex"
+            Write-Host "Parsing Season\Episode numbers using standard format regex"
             $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
 
             # Parse out season/episode number
@@ -703,7 +703,7 @@ function Get-SeasonEpisodeNumbersFromString {
         # if unable to parse season/episode number, prompt in console session
         if (!($SeasonNumber -or $EpisodeNumber))
         {
-            Write-Warning "Episode or Season number not detected from file name"
+            Write-Host "Episode or Season number not detected from file name" -ForegroundColor Yellow
             $Confirm = Read-Host "Input values [y/n]?"
             if ($Confirm -match "[yY]")
             {
@@ -766,10 +766,10 @@ function Get-SeasonEpisodeNumbersFromString {
     
     end
     {
-        Write-Host "Detected filename season number: $SeasonNumber"
-        Write-Host "Detected filename episode number: $EpisodeNumber"
-        Write-Host "Trimmed season number: $SeasonTrim"
-        Write-Host "Trimmed episode number: $EpisodeTrim"
+        Write-Host "Detected filename season number: $SeasonNumber" -ForegroundColor Green
+        Write-Host "Detected filename episode number: $EpisodeNumber"  -ForegroundColor Green
+        Write-Host "Trimmed season number: $SeasonTrim" -ForegroundColor Green
+        Write-Host "Trimmed episode number: $EpisodeTrim" -ForegroundColor Green
         
         # Return destination folder name and path
         $Numbers = @{
@@ -809,17 +809,17 @@ function Get-NewEpisodeName {
     {
         if ($EpisodeMatch)
         {
-            Write-Host "Episode data match found"
-            Write-Host "Episode name: $($EpisodeMatch.episodeName)"
-            Write-Host "DB Season number: $($EpisodeMatch.airedSeason)"
-            Write-Host "DB Episode number: $($EpisodeMatch.airedEpisodeNumber)"
+            Write-Host "Episode data match found" -ForegroundColor Green
+            Write-Host "Episode name: $($EpisodeMatch.episodeName)" -ForegroundColor Green
+            Write-Host "DB Season number: $($EpisodeMatch.airedSeason)" -ForegroundColor Green
+            Write-Host "DB Episode number: $($EpisodeMatch.airedEpisodeNumber)" -ForegroundColor Green
             $NewEpisodeName = $EpisodeMatch.episodeName.replace(":"," -")
             $NewEpisodeName = $NewEpisodeName.replace("/",", ")
             $NewEpisodeName = $NewEpisodeName.replace(" / ",", ")
             $NewEpisodeName = $NewEpisodeName.replace("`"","'")
             $NewEpisodeName = $NewEpisodeName.replace("\?", "")
             $NewEpisodeName = $NewEpisodeName.replace("?", "")
-            Write-Host "Updated episode name: `"$NewEpisodeName`""
+            Write-Host "Updated episode name: `"$NewEpisodeName`"" -ForegroundColor Green
     
             if ($NewEpisodeName -notmatch $WindowsFileNameRegex)
             {

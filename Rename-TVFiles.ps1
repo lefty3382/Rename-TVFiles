@@ -19,7 +19,7 @@ param
         Position = 0,
         ValueFromPipeline = $false)]
     [Alias("Source","Path")]
-    [string]$SourcePath = "\\192.168.0.64\storage\Film\",
+    [string]$SourcePath = "\\192.168.0.16\storage\Film\",
 
     # Parent directory path for individual download folders
     [Parameter(
@@ -27,7 +27,7 @@ param
         Position = 1,
         ValueFromPipeline = $false)]
     [Alias("Downloads")]
-    [string]$DownloadsDirectory = "\\192.168.0.64\storage\Film\_New",
+    [string]$DownloadsDirectory = "\\192.168.0.16\storage\Film\_New",
 
     # Path to API key file, JSON format
     [Parameter(
@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.11.3"
+# ScriptVersion = "1.0.11.4"
 
 ##################################
 # Script Variables

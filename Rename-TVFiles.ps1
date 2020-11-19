@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.0.12.0"
+# ScriptVersion = "1.0.12.1"
 
 ##################################
 # Script Variables
@@ -97,9 +97,9 @@ function Get-TVorAnimeDirectory {
         }
         else
         {
-            Write-Host "You are not very smart!" -ForegroundColor Yellow
-            Write-Host "That was an invalid answer!" -ForegroundColor Yellow
-            Write-Host "As a reward, you have to start over now!" -ForegroundColor Yellow
+            Write-Host "You are not very smart!" -ForegroundColor Red
+            Write-Host "That was an invalid answer!" -ForegroundColor Red
+            Write-Host "As a reward, you have to start over now!" -ForegroundColor Red
             exit
         }
     }
@@ -175,19 +175,19 @@ function Get-TargetDirectory {
             [int]$i = "0"
 
             Write-Host "`n"
-            Write-Host "Folder Count: $($SubFolders.count)" -ForegroundColor Yellow
+            Write-Host "Folder Count: $($SubFolders.count)" -ForegroundColor Blue
             Write-Host "`n"
 
             foreach ($SubFolder in $SubFolders)
             {
-                Write-Host "$i - `"$($SubFolder.name)`"" -ForegroundColor Yellow
+                Write-Host "$i - `"$($SubFolder.name)`"" -ForegroundColor Blue
                 $i++
             }
 
             Write-Host "`n"
             $FolderNumber = Read-Host "Select folder"
             $TargetFolder = $SubFolders[$FolderNumber]
-            Write-Host "Folder selected: `"$($TargetFolder.Name)`"" -ForegroundColor Yellow
+            Write-Host "Folder selected: `"$($TargetFolder.Name)`"" -ForegroundColor Green
         }
         elseif ($SubFolders.count -eq 1)
         {
@@ -421,7 +421,7 @@ function Remove-SubFolders {
     begin
     {
         $Files = Get-ChildItem -LiteralPath $DirectoryPath -Recurse -Force
-        Write-Host "Checking for subfolders at path: $DirectoryPath"  -ForegroundColor Yellow
+        Write-Host "Checking for subfolders at path: $DirectoryPath"  -ForegroundColor Blue
     }
     
     process
@@ -431,19 +431,19 @@ function Remove-SubFolders {
             # Subfolders: move files to parent folder if folder named Subs\Subtitles\Season*
             if ($File.PSIsContainer -eq $true)
             {
-                Write-Host "Subfolder found: $($File.name)" -ForegroundColor Yellow
+                Write-Host "Subfolder found: $($File.name)" -ForegroundColor Blue
                 if (($File.Name -match "(?i)^(Subs|Subtitles)$") -or ($File.Name -match "(?i)^Season"))
                 {
-                    Write-Host "Acceptable subfolder detected: `"$($File.name)`""
+                    Write-Host "Acceptable subfolder detected: `"$($File.name)`"" -ForegroundColor Green
                     $Subs = Get-ChildItem $File.fullname
                     foreach ($Subfile in $Subs)
                     {
-                        Write-Host "Moving: $($Subfile.FullName)" -ForegroundColor Yellow
-                        Write-Host "New path: $($TargetFolder.FullName)" -ForegroundColor Yellow
+                        Write-Host "Moving: $($Subfile.FullName)" -ForegroundColor Blue
+                        Write-Host "New path: $($TargetFolder.FullName)" -ForegroundColor Blue
                         Move-Item -LiteralPath $subfile.fullname -Destination $TargetFolder.FullName -Force
                     }
                     # Delete Subfolder
-                    Write-Host "Removing folder: $($File.FullName)" -ForegroundColor Yellow
+                    Write-Host "Removing folder: $($File.FullName)" -ForegroundColor Blue
                     Remove-Item -LiteralPath $File.FullName -Recurse -Force
                 }
                 # "Extras" subfolder
@@ -684,7 +684,7 @@ function Get-SeasonEpisodeNumbersFromString {
         # Parse season/episode numbers from file name if not already done
         if (!($SeasonNumber -or $EpisodeNumber))
         {
-            Write-Host "Parsing Season\Episode numbers using standard format regex" -ForegroundColor Yellow
+            Write-Host "Parsing Season\Episode numbers using standard format regex" -ForegroundColor Blue
             $NewNameSplit = $NewName -split $StandardSeasonEpisodeFormatRegex
 
             # Parse out season/episode number
@@ -930,8 +930,8 @@ function Move-FileAndRename {
     
     process
     {
-        Write-Host "New file name: `"$DestinationEpisodeName`"" -ForegroundColor Yellow
-        Write-Host "Moving `"$CurrentFileFullname`" to $NewFilePath" -ForegroundColor Yellow
+        Write-Host "New file name: `"$DestinationEpisodeName`"" -ForegroundColor Blue
+        Write-Host "Moving `"$CurrentFileFullname`" to $NewFilePath" -ForegroundColor Blue
         try
         {
             Move-Item -LiteralPath $CurrentFileFullname -Destination $NewFilePath -Force -ErrorAction Stop

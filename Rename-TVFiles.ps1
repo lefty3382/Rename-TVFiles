@@ -39,7 +39,7 @@ param
     [string]$APIKey = "Z:\GitHub\TVDBKey.json"
 )
 
-# ScriptVersion = "1.0.11.4"
+# ScriptVersion = "1.0.11.5"
 
 ##################################
 # Script Variables
@@ -785,14 +785,14 @@ function Get-SeasonEpisodeNumbersFromString {
 function Get-NewEpisodeName {
     [CmdletBinding()]
     param (
-        # Source String
+        # Episode data object ($EpisodeData) from the Get-EpisodeData function
         [Parameter(
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $false)]
         [array]$EpisodeDataObject,
 
-        # Source String
+        # Season/Episode numbers from object ($NumbersFromFile) from the Get-SeasonEpisodeNumbersFromString function
         [Parameter(
             Mandatory = $true,
             Position = 0,
@@ -802,6 +802,7 @@ function Get-NewEpisodeName {
     
     begin
     {
+        # Find matching episode data from TheTVDB database using season and episode numbers from original file name
         $EpisodeMatch = $EpisodeDataObject | Where-Object { ($_.airedepisodenumber -like $NumbersFromFile.EpisodeTrim) -and ($_.airedseason -like $NumbersFromFile.SeasonTrim) }
     }
     
@@ -813,6 +814,8 @@ function Get-NewEpisodeName {
             Write-Host "Episode name: $($EpisodeMatch.episodeName)" -ForegroundColor Green
             Write-Host "DB Season number: $($EpisodeMatch.airedSeason)" -ForegroundColor Green
             Write-Host "DB Episode number: $($EpisodeMatch.airedEpisodeNumber)" -ForegroundColor Green
+
+            # Replace common characters which are NOT permitted in Windows file names
             $NewEpisodeName = $EpisodeMatch.episodeName.replace(":"," -")
             $NewEpisodeName = $NewEpisodeName.replace("/",", ")
             $NewEpisodeName = $NewEpisodeName.replace(" / ",", ")
@@ -820,7 +823,8 @@ function Get-NewEpisodeName {
             $NewEpisodeName = $NewEpisodeName.replace("\?", "")
             $NewEpisodeName = $NewEpisodeName.replace("?", "")
             Write-Host "Updated episode name: `"$NewEpisodeName`"" -ForegroundColor Green
-    
+            
+            # Check if name matches Windows file name standards, if not enter custom name
             if ($NewEpisodeName -notmatch $WindowsFileNameRegex)
             {
                 Write-Host "Episode name does NOT conform to Windows file name rules" -ForegroundColor Yellow

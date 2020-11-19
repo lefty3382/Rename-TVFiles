@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.0.12.1"
+# ScriptVersion = "1.0.12.2"
 
 ##################################
 # Script Variables
@@ -873,7 +873,16 @@ function Get-NewEpisodeName {
                 }
                 else
                 {
-                    Write-Host "Proper tag could NOT be determined" -ForegroundColor Yellow
+                    Write-Host "Proper tag could NOT be determined from file name" -ForegroundColor Yellow
+                    $ManualTag = Read-Host "Enter tag value manually ('Cancel' to skip)"
+                    if ($ManualTag -notlike "Cancel")
+                    {
+                        $NewEpisodeName = $NewEpisodeName + " - $ManualTag"
+                    }
+                    else
+                    {
+                        Write-Host "Skipping tag value in new file name" -ForegroundColor Yellow
+                    }
                 }
                 Write-Host "Final episode name: $NewEpisodeName" -ForegroundColor Green
             }

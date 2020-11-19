@@ -36,10 +36,17 @@ param
         ValueFromPipeline = $false)]
     [ValidatePattern("^.*\.json$")]
     [Alias("API","Key")]
-    [string]$APIKey = "Z:\GitHub\TVDBKey.json"
+    [string]$APIKey = "Z:\GitHub\TVDBKey.json",
+
+    # Switch to add format tag (HD/4K) to end of file names
+    [Parameter(
+        Mandatory = $false,
+        Position = 3,
+        ValueFromPipeline = $false)]
+    [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.0.11.5"
+# ScriptVersion = "1.0.12.0"
 
 ##################################
 # Script Variables
@@ -792,12 +799,33 @@ function Get-NewEpisodeName {
             ValueFromPipeline = $false)]
         [array]$EpisodeDataObject,
 
+        # Working file object
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [System.Object]$CurrentFile,
+
+        # Destination folder object from New-DestinationDirectory function
+        [Parameter(
+            Mandatory = $true,
+            Position = 2,
+            ValueFromPipeline = $false)]
+        [System.Object]$DestinationFolder,
+
         # Season/Episode numbers from object ($NumbersFromFile) from the Get-SeasonEpisodeNumbersFromString function
         [Parameter(
             Mandatory = $true,
-            Position = 0,
+            Position = 3,
             ValueFromPipeline = $false)]
-        [array]$NumbersFromFile
+        [array]$NumbersFromFile,
+
+        # Add format tag
+        [Parameter(
+            Mandatory = $false,
+            Position = 4,
+            ValueFromPipeline = $false)]
+        [switch]$AddTag
     )
     
     begin
@@ -822,7 +850,6 @@ function Get-NewEpisodeName {
             $NewEpisodeName = $NewEpisodeName.replace("`"","'")
             $NewEpisodeName = $NewEpisodeName.replace("\?", "")
             $NewEpisodeName = $NewEpisodeName.replace("?", "")
-            Write-Host "Updated episode name: `"$NewEpisodeName`"" -ForegroundColor Green
             
             # Check if name matches Windows file name standards, if not enter custom name
             if ($NewEpisodeName -notmatch $WindowsFileNameRegex)
@@ -830,7 +857,27 @@ function Get-NewEpisodeName {
                 Write-Host "Episode name does NOT conform to Windows file name rules" -ForegroundColor Yellow
                 $NewEpisodeName = Read-Host "Enter custom episode name"
             }
-        
+
+            # Add format tag (HD/4K) if script parameter switch is set
+            if ($AddTag)
+            {
+                Write-Host "Parameter to add format tag to end of file name is enabled" -ForegroundColor Blue
+                Write-Host "Determining correct tag from original file name" -ForegroundColor Blue
+                if ($CurrentFile.name -like "*.1080p.*")
+                {
+                    $NewEpisodeName = $NewEpisodeName + " - HD"
+                }
+                elseif ($CurrentFile.name -like "*.2160p.*")
+                {
+                    $NewEpisodeName = $NewEpisodeName + " - 4K"
+                }
+                else
+                {
+                    Write-Host "Proper tag could NOT be determined" -ForegroundColor Yellow
+                }
+                Write-Host "Final episode name: $NewEpisodeName" -ForegroundColor Green
+            }
+
             $NewFileName = $DestinationFolder.Name + " - " + "S" + $NumbersFromFile.Season + "E" + $NumbersFromFile.Episode + " - " + $NewEpisodeName + $CurrentFile.extension
         }
         else
@@ -945,7 +992,7 @@ for ($i=0;$i -lt $Files.Count;$i++)
     $NumbersFromFile = Get-SeasonEpisodeNumbersFromString -SourceString $CurrentFile.Name
 
     # Get new episode name from DB match
-    $NewEpisodeName = Get-NewEpisodeName -EpisodeDataObject $EpisodeData -NumbersFromFile $NumbersFromFile
+    $NewEpisodeName = Get-NewEpisodeName -EpisodeDataObject $EpisodeData -CurrentFile $CurrentFile -DestinationFolder $DestinationFolder -NumbersFromFile $NumbersFromFile -AddTag:$AddFormatToFileName
 
     # Move file to final destination and rename
     Move-FileAndRename -DestinationFolderPath $DestinationFolder.Path -DestinationEpisodeName $NewEpisodeName -CurrentFileFullname $CurrentFile.FullName

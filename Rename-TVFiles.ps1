@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.0.12.2"
+# ScriptVersion = "1.0.12.3"
 
 ##################################
 # Script Variables
@@ -217,7 +217,7 @@ function Get-SeriesData {
             ValueFromPipeline = $false)]
         [string]$SeriesSearchString,
 
-        # Series Search String
+        # Series Search URL ("https://api.thetvdb.com/search/series?name=")
         [Parameter(
             Mandatory = $true,
             Position = 1,
@@ -284,14 +284,14 @@ function Get-SeriesData {
 function Get-EpisodeData {
     [CmdletBinding()]
     param (
-        # Episode Search String
+        # Episode Search String ("/episodes?page=1")
         [Parameter(
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $false)]
         [string]$EpisodeSearchString,
 
-        # Episode Search URL
+        # Episode Search URL ("https://api.thetvdb.com/series/")
         [Parameter(
             Mandatory = $true,
             Position = 1,
@@ -386,8 +386,8 @@ function Remove-BadFileTypes {
     {
         foreach ($File in $Files)
         {
-            # Delete .TXT .EXE .NFO files
-            if ($File.name -match "(?i)\.(exe|nfo|txt)$")
+            # Delete unwanted file types
+            if ($File.name -match "(?i)\.(exe|nfo|txt|jpg|pdf|zip)$")
             {
                 Write-Host "Removing file: $($File.name)" -ForegroundColor Yellow
                 Remove-Item -LiteralPath $File.fullname -Force
@@ -395,7 +395,8 @@ function Remove-BadFileTypes {
         }
     }
     
-    end {
+    end
+    {
         return
     }
 }

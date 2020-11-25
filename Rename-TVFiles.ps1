@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.1.0.0"
+# ScriptVersion = "1.1.0.1"
 
 ##################################
 # Script Variables
@@ -1016,7 +1016,7 @@ $DestinationFolder = New-DestinationDirectory -SeriesSearchDataName $SeriesSearc
 Remove-SubFolders -DirectoryPath $TargetFolder.FullName -DestinationFolderPath $DestinationFolder.Path
 
 # Remove unnecessary files in target folder
-Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName
+Remove-BadFileTypes -DirectoryPath $TargetFolder.FullName -BadFileTypeRegex $BadFileTypeRegex
 
 # Loop through files
 $Files = Get-ChildItem -LiteralPath $TargetFolder.FullName -Recurse

@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.0.12.3"
+# ScriptVersion = "1.1.0.0"
 
 ##################################
 # Script Variables
@@ -64,6 +64,7 @@ $global:SeasonDigitRegex = '^\d{1,4}$'
 $global:EpisodeDigitRegex = '^\d{1,3}$'
 $TVRegex = "(?i)^0|TV$"
 $AnimeRegex = "(?i)^1|Anime$"
+$BadFileTypeRegex = "(?i)\.(exe|nfo|txt|jpg|pdf|zip)$"
 
 ##################################
 # Script Functions
@@ -374,7 +375,21 @@ function Remove-BadFileTypes {
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true)]
-        [string]$DirectoryPath
+        [string]$DirectoryPath,
+
+        # Target directory path
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $false)]
+        [string]$BadFileTypeRegex,
+
+        # File exclusions
+        [Parameter(
+            Mandatory = $false,
+            Position = 2,
+            ValueFromPipeline = $false)]
+        [string]$Exclude
     )
     
     begin
@@ -387,10 +402,25 @@ function Remove-BadFileTypes {
         foreach ($File in $Files)
         {
             # Delete unwanted file types
-            if ($File.name -match "(?i)\.(exe|nfo|txt|jpg|pdf|zip)$")
+            if ($File.name -match $BadFileTypeRegex)
             {
                 Write-Host "Removing file: $($File.name)" -ForegroundColor Yellow
-                Remove-Item -LiteralPath $File.fullname -Force
+                try
+                {
+                    if ($Exclude)
+                    {
+                        Remove-Item -LiteralPath $File.fullname -Force -Exclude $Exclude -ErrorAction Stop
+                    }
+                    else
+                    {
+                        Remove-Item -LiteralPath $File.fullname -Force -ErrorAction Stop
+                    }
+                }
+                catch
+                {
+                    Write-Host "Failed to remove file: $($File.fullname)" -ForegroundColor Red
+                    Read-Host "Press any key to continue"
+                }
             }
         }
     }

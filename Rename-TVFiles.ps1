@@ -46,7 +46,7 @@ param
     [switch]$AddFormatToFileName = $false
 )
 
-# ScriptVersion = "1.1.0.1"
+# ScriptVersion = "1.1.0.2"
 
 ##################################
 # Script Variables
@@ -900,7 +900,7 @@ function Get-NewEpisodeName {
                 }
                 elseif ($CurrentFile.name -like "*.2160p.*")
                 {
-                    $NewEpisodeName = $NewEpisodeName + " - 4K"
+                    $NewEpisodeName = $NewEpisodeName + " - UHD"
                 }
                 else
                 {
